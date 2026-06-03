@@ -8,7 +8,7 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 #include "ToolMenus.h"
-
+#include "Tester.h"
 
 static const FName GIS_Terrain_GeneratorTabName("GIS_Terrain_Generator");
 

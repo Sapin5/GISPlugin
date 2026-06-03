@@ -1,5 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
+using System.IO;
 using UnrealBuildTool;
 
 public class GIS_Terrain_Generator : ModuleRules
@@ -7,18 +8,20 @@ public class GIS_Terrain_Generator : ModuleRules
 	public GIS_Terrain_Generator(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
+
 		PublicIncludePaths.AddRange(
 			new string[] {
 				// ... add public include paths required here ...
-			}
+				Path.Combine(ModuleDirectory, "Public"),
+            }
 			);
 				
 		
 		PrivateIncludePaths.AddRange(
 			new string[] {
 				// ... add other private include paths required here ...
-			}
+				Path.Combine(ModuleDirectory, "Private")
+            }
 			);
 			
 		
