@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "GIS_Terrain_Generator",
+	"Description": "",
+	"Category": "Other",
+	"CreatedBy": "Oceans North",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "GIS_Terrain_Generator",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}
