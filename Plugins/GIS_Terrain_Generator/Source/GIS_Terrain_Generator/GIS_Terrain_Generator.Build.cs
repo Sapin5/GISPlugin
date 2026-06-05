@@ -46,6 +46,9 @@ public class GIS_Terrain_Generator : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"UnrealEd",
+				"EditorSubsystem",
+				"AssetRegistry"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

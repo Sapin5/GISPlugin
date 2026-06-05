@@ -8,7 +8,7 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 #include "ToolMenus.h"
-#include "Tester.h"
+#include "PluginWindow.h"
 
 static const FName GIS_Terrain_GeneratorTabName("GIS_Terrain_Generator");
 
@@ -55,11 +55,6 @@ void FGIS_Terrain_GeneratorModule::ShutdownModule()
 
 TSharedRef<SDockTab> FGIS_Terrain_GeneratorModule::OnSpawnPluginTab(const FSpawnTabArgs& SpawnTabArgs)
 {
-	FText WidgetText = FText::Format(
-		LOCTEXT("WindowWidgetText", "Add code to {0} in {1} to override this window's contents"),
-		FText::FromString(TEXT("FGIS_Terrain_GeneratorModule::OnSpawnPluginTab")),
-		FText::FromString(TEXT("GIS_Terrain_Generator.cpp"))
-		);
 
 	return SNew(SDockTab)
 		.TabRole(ETabRole::NomadTab)
@@ -69,8 +64,7 @@ TSharedRef<SDockTab> FGIS_Terrain_GeneratorModule::OnSpawnPluginTab(const FSpawn
 			.HAlign(HAlign_Center)
 			.VAlign(VAlign_Center)
 			[
-				SNew(STextBlock)
-				.Text(WidgetText)
+				SNew(SPluginWindow)
 			]
 		];
 }
