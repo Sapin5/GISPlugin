@@ -6,7 +6,7 @@
 #include "Widgets/SCompoundWidget.h"
 #include "Brushes/SlateDynamicImageBrush.h"
 #include "DesktopPlatformModule.h"
-//#include "IPythonScriptPlugin.h"
+#include "IPythonScriptPlugin.h"
 /**
  *
  */
@@ -23,5 +23,5 @@ private:
 	FReply OnButtonClicked();
 	FString SelectedFilePath;
 
-	// void execute();
+	void execute();
 };

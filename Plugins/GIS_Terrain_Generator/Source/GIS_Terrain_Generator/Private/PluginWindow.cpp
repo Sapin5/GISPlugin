@@ -98,7 +98,7 @@ FReply SPluginWindow::OnButtonClicked() {
 
 void SPluginWindow::execute() {
 	IPythonScriptPlugin* PythonPlugin = IPythonScriptPlugin::Get();
-	FString FilePath = FPaths::ProjectPluginsDir() / TEXT("GIS_Terrain_Generator/Content/Python/GIS_DataProcesser.py");
+	FString FilePath = FPaths::ProjectPluginsDir() / TEXT("GIS_Terrain_Generator/Content/Python/GIS_Data_Processor.py");
 
 	if (!PythonPlugin || !PythonPlugin->IsPythonAvailable()) {
 		UE_LOG(LogTemp, Error, TEXT("Python Script Plugin is not available!"));
@@ -107,12 +107,12 @@ void SPluginWindow::execute() {
 
 	FPythonCommandEx Import;
 	Import.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
-	Import.Command = TEXT("import importlib, GIS_DataProcesser; importlib.reload(GIS_DataProcesser)");
+	Import.Command = TEXT("import importlib, GIS_Data_Processor; importlib.reload(GIS_Data_Processor)");
 	PythonPlugin->ExecPythonCommandEx(Import);
 
 	FPythonCommandEx Ex;
 	Ex.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
-	Ex.Command = TEXT("GIS_DataProcesser.hello()");
+	Ex.Command = TEXT("GIS_Data_Processor.hello()");
 
 	if (!PythonPlugin->ExecPythonCommandEx(Ex))
 	{
