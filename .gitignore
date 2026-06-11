@@ -80,5 +80,5 @@ DerivedDataCache/*
 *.png
 
 # Python libraries
-/Plugins/GIS_Terrain_Generator/Content/Python/lib/
-/Plugins/GIS_Terrain_Generator/Content/Python/pip_cache/
+Plugins/GIS_Terrain_Generator/Content/Python/lib
+Plugins/GIS_Terrain_Generator/Content/Python/pip_cache
