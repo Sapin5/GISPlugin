@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Brushes/SlateDynamicImageBrush.h"
+#include "DesktopPlatformModule.h"
+#include "IPythonScriptPlugin.h"
 /**
- * 
+ *
  */
 class GIS_TERRAIN_GENERATOR_API SPluginWindow : public SCompoundWidget
 {
@@ -18,4 +20,8 @@ public:
 private:
 	TSharedPtr<FSlateImageBrush> CustomBrush;
 	TSharedPtr<FSlateDynamicImageBrush> DynamicBrush;
+	FReply OnButtonClicked();
+	FString SelectedFilePath;
+
+	void execute();
 };
