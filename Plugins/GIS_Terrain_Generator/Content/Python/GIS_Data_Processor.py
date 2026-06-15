@@ -5,6 +5,7 @@ import unreal
 import rasterio
 import math
 import numpy as np
+import io
 
 from PIL import Image
 from collections import namedtuple
@@ -120,3 +121,28 @@ def main(file_path):
 
 def hello():
     print("hello asoiudboasidoiasbdoiabdsoia")
+
+def lowResolutionPreview(file_path):
+    """
+    Display a low resolution preview of GeoTIFF
+    Not Saved to disk, preview exists only in memory
+    """
+    """
+    img = Image.open(file_path)
+    img.thumbnail((600, 600))
+
+    # Grayscale conversion jsut to be safe
+    if img.mode != "L":
+        img = img.convert("L")
+    
+
+    preview_buf = io.BytesIO()
+    img.save(preview_buf, format="JPEG", quality=70)
+    preview_buf.seek(0)
+    preview_bytes = preview_buf.read()
+
+    return preview_bytes
+    """
+    print(f"hello I am here {file_path}")
+
+    return "HEllloooooo"

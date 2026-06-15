@@ -23,5 +23,12 @@ private:
 	FReply OnButtonClicked();
 	FString SelectedFilePath;
 
-	void execute();
+	IPythonScriptPlugin* PythonPlugin;
+	FPythonCommandEx Ex;
+
+	void LoadPythonFile();
+	void CopyFile(FString&);
+	void GenerateRaster();
+	void GeneratePreview(FString&);
+	void ErrorCheck(FPythonCommandEx&);
 };
