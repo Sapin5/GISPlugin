@@ -18,17 +18,26 @@ public:
 
 	void Construct(const FArguments& InArgs);
 private:
-	TSharedPtr<FSlateImageBrush> CustomBrush;
+	// TSharedPtr<FSlateImageBrush> CustomBrush;
 	TSharedPtr<FSlateDynamicImageBrush> DynamicBrush;
 	FReply OnButtonClicked();
 	FString SelectedFilePath;
+	
+	UTexture2D* BytesToTexture(const TArray<uint8>& ImageBytes);
+	UTexture2D* PreviewTexture = nullptr;
 
 	IPythonScriptPlugin* PythonPlugin;
+	
+	const FSlateBrush* GetMyBrush() const;
+	
 	FPythonCommandEx Ex;
 
 	void LoadPythonFile();
 	void CopyFile(FString&);
 	void GenerateRaster();
-	void GeneratePreview(FString&);
-	void ErrorCheck(FPythonCommandEx&);
+	UTexture2D* GeneratePreview(FString&);
+	bool ErrorCheck(FPythonCommandEx&);
+
+public:
+	virtual ~SPluginWindow();
 };

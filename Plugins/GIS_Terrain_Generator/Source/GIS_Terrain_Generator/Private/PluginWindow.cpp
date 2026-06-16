@@ -14,23 +14,7 @@
 void SPluginWindow::Construct(const FArguments& InArgs)
 {
 	SPluginWindow::LoadPythonFile();
-	FString ImagePath = FPaths::ProjectPluginsDir() / TEXT("GIS_Terrain_Generator/Resources/TiledMap/PlaceHolder.png");
 
-	// Fallback to avoid crashes
-	const FSlateBrush* BrushToDisplay = FAppStyle::Get().GetBrush("Productivity.Info");
-
-	// FIX: Removed the local declaration line that was here!
-
-	if (FPaths::FileExists(ImagePath)) {
-		// Uses the header file variable, keeping it alive beyond this function
-		DynamicBrush = MakeShareable(new FSlateDynamicImageBrush(FName(*ImagePath), FVector2D(400.0f, 320.0f)));
-		BrushToDisplay = DynamicBrush.Get();
-		UE_LOG(LogTemp, Log, TEXT("Successfully loaded custom image from: %s"), *ImagePath);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Custom Brush not found at %s. Falling back on default!"), *ImagePath);
-	}
 	ChildSlot
 		[
 			SNew(SVerticalBox)
@@ -68,7 +52,8 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 										+ SHorizontalBox::Slot().AutoWidth().Padding(10.0f)
 										[
 											SNew(SImage)
-												.Image(BrushToDisplay).DesiredSizeOverride(FVector2D(400.0f, 320.0f))
+												.Image(this, &SPluginWindow::GetMyBrush)
+												.DesiredSizeOverride(FVector2D(400.0f, 400.0f))
 										]
 								]
 						]
@@ -93,6 +78,26 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 	*/
 };
 
+SPluginWindow::~SPluginWindow()
+{
+	if (PreviewTexture)
+	{
+		PreviewTexture->RemoveFromRoot();
+	}
+}
+
+const FSlateBrush* SPluginWindow::GetMyBrush() const{
+
+	// Fallback to avoid crashes
+	if (DynamicBrush.IsValid()) {
+		UE_LOG(LogTemp, Log, TEXT("Successfully loaded custom image"));
+		return DynamicBrush.Get();
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("No brush loaded. Falling back on default!"));
+	return FAppStyle::Get().GetBrush("Productivity.Info");
+}
+
 
 FReply SPluginWindow::OnButtonClicked() {
 	void* NativeWinHandle = nullptr;
@@ -111,10 +116,25 @@ FReply SPluginWindow::OnButtonClicked() {
 					TEXT("GeoTIFF |*.tiff; *.tif"), 0, OutNames);
 					// Image File | *.png;| <- png files, dropping for now June 15th
 				if (BOpened && OutNames.Num() > 0) {
-					
 					SelectedFilePath = OutNames[0];
-					SPluginWindow::GeneratePreview(SelectedFilePath);
-					// SPluginWindow::GenerateRaster();
+
+					
+					if (PreviewTexture) {
+						PreviewTexture->RemoveFromRoot();
+						PreviewTexture = nullptr;
+					}
+					
+					PreviewTexture = SPluginWindow::GeneratePreview(SelectedFilePath);
+					
+					if (PreviewTexture) {
+						PreviewTexture->AddToRoot(); 
+						DynamicBrush = MakeShared<FSlateDynamicImageBrush>(
+							PreviewTexture,
+							FVector2D(400.0f, 320.0f),
+							FName(*SelectedFilePath)
+						);
+					}
+					
 					UE_LOG(LogTemp, Log, TEXT("Selected File: %s"), *SelectedFilePath)
 				}
 			}
@@ -147,6 +167,7 @@ void SPluginWindow::CopyFile(FString& FilePath) {
 	}
 }
 
+
 void SPluginWindow::LoadPythonFile() {
 	PythonPlugin = IPythonScriptPlugin::Get();
 	FString FilePath = FPaths::ProjectPluginsDir() / TEXT("GIS_Terrain_Generator/Content/Python/GIS_Data_Processor.py");
@@ -160,58 +181,98 @@ void SPluginWindow::LoadPythonFile() {
 	Import.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
 	Import.Command = TEXT("import importlib, GIS_Data_Processor; importlib.reload(GIS_Data_Processor)");
 	PythonPlugin->ExecPythonCommandEx(Import);
-
-	Ex.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
 }
+
 
 void SPluginWindow::GenerateRaster() {
+
+	Ex.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
 	Ex.Command = TEXT("GIS_Data_Processor.hello()");
 
-	SPluginWindow::ErrorCheck(Ex);
+	if (!SPluginWindow::ErrorCheck(Ex)) return;
 }
 
-void SPluginWindow::GeneratePreview(FString& FilePath) {
-	Ex.Command = FString::Printf(TEXT("GIS_Data_Processor.lowResolutionPreview('%s')"), *FilePath);
-	PythonPlugin->ExecPythonCommandEx(Ex);
 
-	FString OutputStr;
-	for (const FPythonLogOutputEntry& Entry : Ex.LogOutput)
-	{
-		OutputStr += Entry.Output + TEXT("\n");
+UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
+
+	FString SafePath = FilePath.Replace(TEXT("\\"), TEXT("/"));
+
+	Ex = FPythonCommandEx();
+	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement;
+	Ex.Command = FString::Format(TEXT("GIS_Data_Processor.lowResolutionPreview('{0}')"), { SafePath });
+	
+	if(!SPluginWindow::ErrorCheck(Ex)) return nullptr;
+
+	FString TempPath = Ex.CommandResult.TrimStartAndEnd();
+	TempPath = TempPath.Replace(TEXT("'"), TEXT("")).Replace(TEXT("\""), TEXT(""));
+	UE_LOG(LogTemp, Log, TEXT("Python returned: '%s'"), *Ex.CommandResult);
+	UE_LOG(LogTemp, Log, TEXT("Parsed TempPath: '%s'"), *TempPath);
+	TArray<uint8> ImageBytes;
+	if (!FFileHelper::LoadFileToArray(ImageBytes, *TempPath)) {
+		UE_LOG(LogTemp, Error, TEXT("Failed to load temp file: %s"), *TempPath);
+		return nullptr;
 	}
-	UE_LOG(LogTemp, Log, TEXT("Heee HEEEE %s"), *OutputStr);
+
+	IFileManager::Get().Delete(*TempPath);
+
+	UE_LOG(LogTemp, Warning, TEXT("Preview has been created"));
+	return SPluginWindow::BytesToTexture(ImageBytes);
 }
 
-void SPluginWindow::ErrorCheck(FPythonCommandEx& command) {
 
+bool SPluginWindow::ErrorCheck(FPythonCommandEx& command) {
+	/*
+	* This is what executes commands. Probably will rename to better fit
+	* its use
+	*/
 	if (!PythonPlugin->ExecPythonCommandEx(command))
 	{
 		UE_LOG(LogTemp, Error, TEXT("Python call failed: %s"), *command.CommandResult);
+		return false;
 	}
+	return true;
 }
 
-UTexture2D* BytesToTexture(const TArray<uint8>& ImageBytes) {
+
+UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
+	// Add this first:
+	UE_LOG(LogTemp, Log, TEXT("BytesToTexture received %d bytes"), ImageBytes.Num());
+
 	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
 	TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG);
-	
-	if (!ImageWrapper.IsValid() || !ImageWrapper->SetCompressed(ImageBytes.GetData(), ImageBytes.Num()))
+
+	if (!ImageWrapper.IsValid())
 	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to create ImageWrapper"));
+		return nullptr;
+	}
+
+	if (!ImageWrapper->SetCompressed(ImageBytes.GetData(), ImageBytes.Num()))
+	{
+		UE_LOG(LogTemp, Error, TEXT("SetCompressed failed - data may not be valid JPEG"));
 		return nullptr;
 	}
 
 	TArray<uint8> UncompressedData;
-	if (!ImageWrapper->GetRaw(ERGBFormat::Gray, 8, UncompressedData))
+	if (!ImageWrapper->GetRaw(ERGBFormat::BGRA, 8, UncompressedData))
 	{
+		UE_LOG(LogTemp, Error, TEXT("GetRaw failed"));
 		return nullptr;
 	}
+
+	UE_LOG(LogTemp, Log, TEXT("Image size: %d x %d"), ImageWrapper->GetWidth(), ImageWrapper->GetHeight());
 
 	UTexture2D* Texture = UTexture2D::CreateTransient(
 		ImageWrapper->GetWidth(),
 		ImageWrapper->GetHeight(),
-		PF_G8
+		PF_B8G8R8A8
 	);
 
-	if (!Texture) return nullptr;
+	if (!Texture)
+	{
+		UE_LOG(LogTemp, Error, TEXT("CreateTransient failed"));
+		return nullptr;
+	}
 
 	void* TextureData = Texture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
 	FMemory::Memcpy(TextureData, UncompressedData.GetData(), UncompressedData.Num());

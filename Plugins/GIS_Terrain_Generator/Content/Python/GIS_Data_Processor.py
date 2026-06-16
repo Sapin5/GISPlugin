@@ -6,6 +6,7 @@ import rasterio
 import math
 import numpy as np
 import io
+import tempfile
 
 from PIL import Image
 from collections import namedtuple
@@ -36,7 +37,7 @@ def getWindowSize(totalWidth, totalHeight):
         windowHeight = round(totalHeight/subdivisions) if round(totalHeight/subdivisions) > 256 else 256
         subdivisions+=1
 
-    print(f"Resolution scaling ({windowWidth}, {windowHeight}). Subdivisions {subdivisions}")
+    # print(f"Resolution scaling ({windowWidth}, {windowHeight}). Subdivisions {subdivisions}")
     return Segment(windowWidth, windowHeight, subdivisions)
 
 def getMinMax(data):
@@ -99,7 +100,7 @@ def processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape):
             img.save(filename, dpi=(600, 600))
         
             # indicator of progress
-            print(f"Processed {current}/{total} segments")
+            # print(f"Processed {current}/{total} segments")
 
 
 def main(file_path):
@@ -120,29 +121,30 @@ def main(file_path):
         processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape)
 
 def hello():
-    print("hello asoiudboasidoiasbdoiabdsoia")
+    # print("hello asoiudboasidoiasbdoiabdsoia")
+    i = 1
 
 def lowResolutionPreview(file_path):
     """
     Display a low resolution preview of GeoTIFF
     Not Saved to disk, preview exists only in memory
     """
-    """
-    img = Image.open(file_path)
-    img.thumbnail((600, 600))
+    with rasterio.open(file_path) as src:
+        data = src.read(1, out_shape=(512, 512))
+
+    data = data.astype(np.float32)
+    data_min, data_max = np.nanmin(data), np.nanmax(data)
+    normalized = ((data - data_min) / (data_max - data_min) * 255).astype(np.uint8)
+
+    img = Image.fromarray(normalized)
+    img.thumbnail((512, 512))
 
     # Grayscale conversion jsut to be safe
     if img.mode != "L":
         img = img.convert("L")
-    
 
-    preview_buf = io.BytesIO()
-    img.save(preview_buf, format="JPEG", quality=70)
-    preview_buf.seek(0)
-    preview_bytes = preview_buf.read()
+    tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+    img.save(tmp, format="JPEG", quality=70)
+    tmp.close()
 
-    return preview_bytes
-    """
-    print(f"hello I am here {file_path}")
-
-    return "HEllloooooo"
+    return tmp.name
