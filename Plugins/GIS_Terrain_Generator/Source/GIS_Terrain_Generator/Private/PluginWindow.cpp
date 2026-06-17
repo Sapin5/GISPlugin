@@ -7,10 +7,14 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Images/SImage.h"
 #include "Misc/Paths.h"
-#include "IImageWrapper.h"
-#include "IImageWrapperModule.h"
 #include "Engine/Texture2D.h"
 
+#include "ImageUtils.h"
+#include "ImageCore.h"
+#include "ImageCoreUtils.h"
+
+
+// I dont like unreal
 void SPluginWindow::Construct(const FArguments& InArgs)
 {
 	SPluginWindow::LoadPythonFile();
@@ -61,7 +65,7 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 		];
 
 
-	// Commented out while I work out how to better use slate
+	// Combo button could be useful later
 	/*
 	SNew(SComboButton)
 	.ButtonContent()
@@ -78,56 +82,87 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 	*/
 };
 
-SPluginWindow::~SPluginWindow()
-{
+
+SPluginWindow::~SPluginWindow() {
 	if (PreviewTexture)
 	{
 		PreviewTexture->RemoveFromRoot();
 	}
 }
 
-const FSlateBrush* SPluginWindow::GetMyBrush() const{
 
-	// Fallback to avoid crashes
+const FSlateBrush* SPluginWindow::GetMyBrush() const {
+	/*
+	* Gets texture for brush
+	* Has a fallback when there is no brush available
+	*/
 	if (DynamicBrush.IsValid()) {
+		// If texture exists for brush, loads it and returns it
 		UE_LOG(LogTemp, Log, TEXT("Successfully loaded custom image"));
 		return DynamicBrush.Get();
 	}
 
+	// Fall back in the event no brush texture exists
 	UE_LOG(LogTemp, Warning, TEXT("No brush loaded. Falling back on default!"));
 	return FAppStyle::Get().GetBrush("Productivity.Info");
 }
 
 
 FReply SPluginWindow::OnButtonClicked() {
+	/*
+	* Handles button click. Probably will have to rename
+	*/
+
+	// Generic pointer type, Gets converted later
 	void* NativeWinHandle = nullptr;
+
+	// Gets the current active top level window (focused window)
 	TSharedPtr<SWindow> ParentWindow = FSlateApplication::Get().GetActiveTopLevelWindow();
+
 	// To Do: break this into more functions or into a seperate file
 	if (ParentWindow.IsValid()) {
-		TSharedPtr<FGenericWindow> NativeWindow = ParentWindow->GetNativeWindow();
 
+		// Gets the OS/platform specific window handle (win32, linux, etc) 
+		TSharedPtr<FGenericWindow> NativeWindow = ParentWindow->GetNativeWindow();
 		if (NativeWindow.IsValid()) {
+
+			// Gets the raw, platform-specific OS handle (HWND on Windows, NSWindow* on macOS)
 			NativeWinHandle = NativeWindow->GetOSWindowHandle();
+
+			// Accesses the desktop platform interface to handle native OS file/folder pickers
 			IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
 
 			if (DesktopPlatform) {
+
+				// // Array to store the paths/names of the files selected
 				TArray<FString> OutNames;
+
+				// Opens native file explorer and filters for only .tiff, .tif files for selection
+				// Stores selected files/folder in outnames
 				bool BOpened = DesktopPlatform->OpenFileDialog(NativeWinHandle, TEXT("Open folder"), "d:\\", FString(""),
 					TEXT("GeoTIFF |*.tiff; *.tif"), 0, OutNames);
 					// Image File | *.png;| <- png files, dropping for now June 15th
+
 				if (BOpened && OutNames.Num() > 0) {
+					
+					// Gets first item in array
 					SelectedFilePath = OutNames[0];
 
-					
+					// Removes current texture if it exists
+					// replaces it with null pointer
 					if (PreviewTexture) {
 						PreviewTexture->RemoveFromRoot();
 						PreviewTexture = nullptr;
 					}
 					
+					// Sets new texture created from GeoTIFF
 					PreviewTexture = SPluginWindow::GeneratePreview(SelectedFilePath);
 					
+					// Adds the texture to root
 					if (PreviewTexture) {
-						PreviewTexture->AddToRoot(); 
+						PreviewTexture->AddToRoot();
+
+						// Creates brush to display in widget
 						DynamicBrush = MakeShared<FSlateDynamicImageBrush>(
 							PreviewTexture,
 							FVector2D(400.0f, 320.0f),
@@ -136,10 +171,7 @@ FReply SPluginWindow::OnButtonClicked() {
 					}
 					
 					UE_LOG(LogTemp, Log, TEXT("Selected File: %s"), *SelectedFilePath)
-				}
-			}
-		}
-	}
+	}	}	}	} // I will not be undoing this, it looks funny
 	return FReply::Handled();
 }
 
@@ -169,6 +201,10 @@ void SPluginWindow::CopyFile(FString& FilePath) {
 
 
 void SPluginWindow::LoadPythonFile() {
+	/*
+	* Creates instance of python script plugin
+	* Defines path to script and loads it
+	*/
 	PythonPlugin = IPythonScriptPlugin::Get();
 	FString FilePath = FPaths::ProjectPluginsDir() / TEXT("GIS_Terrain_Generator/Content/Python/GIS_Data_Processor.py");
 
@@ -176,16 +212,25 @@ void SPluginWindow::LoadPythonFile() {
 		UE_LOG(LogTemp, Error, TEXT("Python Script Plugin is not available!"));
 		return;
 	}
-
+	
+	// Imports file and executes it
+	// This runs all the imports and anything not within a "def"
+	// Reloads the .py file in the event its already been loaded
 	FPythonCommandEx Import;
 	Import.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
 	Import.Command = TEXT("import importlib, GIS_Data_Processor; importlib.reload(GIS_Data_Processor)");
-	PythonPlugin->ExecPythonCommandEx(Import);
+	if (!SPluginWindow::ErrorCheck(Import)) return;
 }
 
 
 void SPluginWindow::GenerateRaster() {
-
+	/*
+	* Generates raster segments of full GeoTiff
+	* This is needed since unreal cannot always process raw GeoTIFFS
+	* Currentl not actually running or doing anything as file paths need to be reworked
+	* created .png files are added directly to folders which bypasses unreals import
+	* which unreal does not like. This is gonna be a headache
+	*/
 	Ex.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
 	Ex.Command = TEXT("GIS_Data_Processor.hello()");
 
@@ -195,27 +240,41 @@ void SPluginWindow::GenerateRaster() {
 
 UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 
+	// Theres a slight chance that if the file path contains ../n/..
+	// python will read the filepath and make a newline this prevents that
 	FString SafePath = FilePath.Replace(TEXT("\\"), TEXT("/"));
 
-	Ex = FPythonCommandEx();
-	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement;
+	// prepares command for execution
+	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
+	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
 	Ex.Command = FString::Format(TEXT("GIS_Data_Processor.lowResolutionPreview('{0}')"), { SafePath });
 	
+	// Run command and check if it fails
 	if(!SPluginWindow::ErrorCheck(Ex)) return nullptr;
 
+	// function returns string, this will remove whitespace
 	FString TempPath = Ex.CommandResult.TrimStartAndEnd();
+	// Python can use single quotes for strings, this is just gonna remove that
 	TempPath = TempPath.Replace(TEXT("'"), TEXT("")).Replace(TEXT("\""), TEXT(""));
+
 	UE_LOG(LogTemp, Log, TEXT("Python returned: '%s'"), *Ex.CommandResult);
 	UE_LOG(LogTemp, Log, TEXT("Parsed TempPath: '%s'"), *TempPath);
+
+	// Array to hold the raw binary data of the image
 	TArray<uint8> ImageBytes;
+
+	// Read the temporary file's raw bytes into the array
 	if (!FFileHelper::LoadFileToArray(ImageBytes, *TempPath)) {
 		UE_LOG(LogTemp, Error, TEXT("Failed to load temp file: %s"), *TempPath);
 		return nullptr;
 	}
 
+	// Deletes tempfile that was created by python script
 	IFileManager::Get().Delete(*TempPath);
 
 	UE_LOG(LogTemp, Warning, TEXT("Preview has been created"));
+
+	// Creates and returns Texture2D created from bytes
 	return SPluginWindow::BytesToTexture(ImageBytes);
 }
 
@@ -225,7 +284,7 @@ bool SPluginWindow::ErrorCheck(FPythonCommandEx& command) {
 	* This is what executes commands. Probably will rename to better fit
 	* its use
 	*/
-	if (!PythonPlugin->ExecPythonCommandEx(command))
+	if (!PythonPlugin->ExecPythonCommandEx(command)) // <- this both executes the command and checks if it failed
 	{
 		UE_LOG(LogTemp, Error, TEXT("Python call failed: %s"), *command.CommandResult);
 		return false;
@@ -234,50 +293,39 @@ bool SPluginWindow::ErrorCheck(FPythonCommandEx& command) {
 }
 
 
+
 UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
-	// Add this first:
+	/*
+	* Creates a Texture2D from bytes
+	* 
+	* prior method was using had a bunch of warniings to not us it and to use FImage so yeah
+	*/
 	UE_LOG(LogTemp, Log, TEXT("BytesToTexture received %d bytes"), ImageBytes.Num());
 
-	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-	TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG);
+	// Create variables
+	FImage OutImage;
+	UTexture2D* Texture{ nullptr };
 
-	if (!ImageWrapper.IsValid())
-	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to create ImageWrapper"));
-		return nullptr;
+	// Create FImage from bytes, for some reason this is in the wrong colour channels
+	if (FImageUtils::DecompressImage(ImageBytes.GetData(), ImageBytes.Num(), OutImage)) {
+
+		// Force colour channel to valid
+		OutImage.ChangeFormat(ERawImageFormat::BGRA8, EGammaSpace::sRGB);
+
+		// Create actual texture 2D
+		Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
+
+		if (Texture) {
+			// Optimize the texture specifically for Editor UI rendering
+			Texture->SRGB = true;
+			Texture->CompressionSettings = TC_EditorIcon;
+			Texture->LODGroup = TEXTUREGROUP_UI;
+			Texture->NeverStream = true;
+			Texture->UpdateResource();
+
+			return Texture;
+		}
 	}
 
-	if (!ImageWrapper->SetCompressed(ImageBytes.GetData(), ImageBytes.Num()))
-	{
-		UE_LOG(LogTemp, Error, TEXT("SetCompressed failed - data may not be valid JPEG"));
-		return nullptr;
-	}
-
-	TArray<uint8> UncompressedData;
-	if (!ImageWrapper->GetRaw(ERGBFormat::BGRA, 8, UncompressedData))
-	{
-		UE_LOG(LogTemp, Error, TEXT("GetRaw failed"));
-		return nullptr;
-	}
-
-	UE_LOG(LogTemp, Log, TEXT("Image size: %d x %d"), ImageWrapper->GetWidth(), ImageWrapper->GetHeight());
-
-	UTexture2D* Texture = UTexture2D::CreateTransient(
-		ImageWrapper->GetWidth(),
-		ImageWrapper->GetHeight(),
-		PF_B8G8R8A8
-	);
-
-	if (!Texture)
-	{
-		UE_LOG(LogTemp, Error, TEXT("CreateTransient failed"));
-		return nullptr;
-	}
-
-	void* TextureData = Texture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
-	FMemory::Memcpy(TextureData, UncompressedData.GetData(), UncompressedData.Num());
-	Texture->GetPlatformData()->Mips[0].BulkData.Unlock();
-	Texture->UpdateResource();
-
-	return Texture;
+	return nullptr;
 }

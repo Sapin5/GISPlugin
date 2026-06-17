@@ -57,7 +57,7 @@ public class GIS_Terrain_Generator : ModuleRules
                 "AssetRegistry",
                 "DesktopPlatform",
                 "PythonScriptPlugin",
-                "ImageWrapper"
+                "ImageCore"
 				// ... add private dependencies that you statically link with here ...	
 			}
             );

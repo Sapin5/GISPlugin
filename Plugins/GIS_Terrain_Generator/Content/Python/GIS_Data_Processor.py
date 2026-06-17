@@ -13,17 +13,26 @@ from collections import namedtuple
 from rasterio.windows import Window as Window
 from pathlib import Path
 
+# Creating "Structs" to keep data passed coherent and simple
 Segment = namedtuple('Segment', ['width', 'height', 'subdivisions'])
 Stats = namedtuple('Stats',['min', 'max'])
 Shape = namedtuple('Shape', ['rows', 'cols'])
+
 output_dir = os.path.join(Path(__file__).parent, "raster_segments")
 
 
 def outPutFolders():
-    # Creating folder to store output
-    os.makedirs(output_dir, exist_ok=True)
+    """
+    Create output directories
+    """
+    # Potentially change this to create unique directoriesor allow user to select directory
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
 
 def getWindowSize(totalWidth, totalHeight):
+    """
+    Gets window size for segmentation and data parsing
+    """
     windowHeight = totalHeight
     windowWidth  = totalWidth
 
@@ -41,6 +50,9 @@ def getWindowSize(totalWidth, totalHeight):
     return Segment(windowWidth, windowHeight, subdivisions)
 
 def getMinMax(data):
+    """
+    Finds the min and max values in data set 
+    """
     # Read data statistics once
     globalStats = data.stats(indexes=1)[0]
     globalMin = globalStats.min
@@ -49,7 +61,11 @@ def getMinMax(data):
     return Stats(globalMin, globalMax)
 
 def processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape):
-
+    """
+    Processes the data and creates raster segments
+    Outputs the segments to folder for them to be later stitched
+    together in order to create larger image within unreal
+    """
     # noramalizing into 16bit
     rangeDiff = globalStats.max-globalStats.min
 
@@ -68,22 +84,6 @@ def processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape):
             
             # Extract first window from data set, this is uncompressed 
             wData = data.read(1, window=window)
-
-
-            """
-            # To save on ram for displaying this is going to get compressed. 
-            # Change target shape and resampling in order to tweak preview output
-            previewData = data.read(1, window=window, out_shape=targetShape, resampling=rasterio.enums.Resampling.bilinear)
-
-            # load the spreview segment into subplot
-            ax = axs[i, j]
-            ax.imshow(previewData, cmap="gray", vmin=globalStats.min, vmax=globalStats.max,
-                    extent=[colOff, colOff + wWidth, rowOff + wHeight, rowOff])
-            ax.set_xlim(colOff, colOff + windowInfo.width)
-            ax.set_ylim(rowOff + windowInfo.height, rowOff)
-
-            ax.axis("off")
-            """
 
             # Clipping data to prevent weird outliers
             clippedData = np.clip(wData, globalStats.min, globalStats.max)
@@ -104,31 +104,43 @@ def processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape):
 
 
 def main(file_path):
+    """
+    Loads, process, and outputs GeoTIFF raster
+    """
 
     outPutFolders()
 
+    # Open file and load data into memory
+    # ALso closes
     with rasterio.open(file_path) as data:
-            
+        
+        # Creates window size for segmenting
         windowInfo = getWindowSize(data.width, data.height)
 
+        # Total rows and columns
         totalRowsAndCols = Shape(math.ceil(data.width / windowInfo.width),
                                 math.ceil(data.height / windowInfo.height))
 
+        # Currently unused, might delete later
         targetShape = (math.ceil(windowInfo.height/windowInfo.subdivisions), 
                     math.ceil(windowInfo.width/windowInfo.subdivisions))
 
+        # Get dataset min max
         globalStats = getMinMax(data)
         processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape)
 
 def hello():
+    """ 
+    Temporary function for testing calling python functions in unreal
+    """
     # print("hello asoiudboasidoiasbdoiabdsoia")
     i = 1
 
 def lowResolutionPreview(file_path):
     """
-    Display a low resolution preview of GeoTIFF
-    Not Saved to disk, preview exists only in memory
+    Create a low resolution preview of GeoTIFF
     """
+
     with rasterio.open(file_path) as src:
         data = src.read(1, out_shape=(512, 512))
 
