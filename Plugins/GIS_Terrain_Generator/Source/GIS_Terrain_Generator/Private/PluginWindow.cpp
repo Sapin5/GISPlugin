@@ -18,18 +18,18 @@
 void SPluginWindow::Construct(const FArguments& InArgs)
 {
 	SPluginWindow::LoadPythonFile();
+	DefaultBrush = FAppStyle::Get().GetBrush("Productivity.Info");
+	EnableConfirm = false;
 
 	ChildSlot
 		[
 			SNew(SVerticalBox)
 				// Heading slot
-				+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
+				+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
 				[
-					SNew(STextBlock)
-						.Text(INVTEXT("Terrain Generation"))
+					SNew(STextBlock).Text(INVTEXT("Terrain Generation"))
 						.Font(FCoreStyle::Get().GetFontStyle("HeadingMain"))
 				]
-
 				// Section with a border detail
 				+ SVerticalBox::Slot().AutoHeight().Padding(2.0f)
 				[
@@ -38,30 +38,48 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 						.Padding(4.0f)
 						[
 							SNew(SVerticalBox)
-								+ SVerticalBox::Slot().AutoHeight().Padding(3.0f, 1.0f)
-								[
-									SNew(STextBlock)
-										.Text(INVTEXT("GeoTIFF preview"))
-										.Font(FCoreStyle::Get().GetFontStyle("HeadingMain"))
-								]
-								+ SVerticalBox::Slot().AutoHeight().Padding(3.0f, 1.0f)
+								+ SVerticalBox::Slot().AutoHeight().Padding(4.0f)
 								[
 									SNew(SHorizontalBox)
-										+ SHorizontalBox::Slot().AutoWidth().Padding(2.0f).VAlign(VAlign_Top)
-										[
-											SNew(SButton)
-												.Text(INVTEXT("Select File"))
-												.OnClicked(this, &SPluginWindow::OnButtonClicked)
-										]
 										+ SHorizontalBox::Slot().AutoWidth().Padding(10.0f)
 										[
-											SNew(SImage)
-												.Image(this, &SPluginWindow::GetMyBrush)
-												.DesiredSizeOverride(FVector2D(400.0f, 400.0f))
+											SNew(SVerticalBox)
+												+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
+												[
+													SNew(SButton)
+														.Text(INVTEXT("Select File")).HAlign(HAlign_Center)
+														.OnClicked(this, &SPluginWindow::SelectFile)
+												]
+												+SVerticalBox::Slot()
+												[
+													SNew(SSpacer).Size(FVector2D(0, 20))
+												]
+												+SVerticalBox::Slot().AutoHeight().Padding(10.0f)
+												[
+													SNew(SButton)
+														.Text(INVTEXT("Confirm")).HAlign(HAlign_Center)
+														.IsEnabled(false)
+														.OnClicked(this, &SPluginWindow::ConfirmFile)
+												]
+										]
+									+ SHorizontalBox::Slot().AutoWidth().Padding(4.0f)
+										[
+											SNew(SVerticalBox)
+												+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
+												[	
+													SNew(STextBlock).Text(INVTEXT("GeoTIFF Preview"))
+												]
+												+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
+												[
+													SNew(SImage)
+														.Image(this, &SPluginWindow::GetMyBrush)
+														.DesiredSizeOverride(FVector2D(400.0f, 400.0f))
+												]
 										]
 								]
 						]
 				]
+
 		];
 
 
@@ -102,13 +120,11 @@ const FSlateBrush* SPluginWindow::GetMyBrush() const {
 		return DynamicBrush.Get();
 	}
 
-	// Fall back in the event no brush texture exists
-	UE_LOG(LogTemp, Warning, TEXT("No brush loaded. Falling back on default!"));
-	return FAppStyle::Get().GetBrush("Productivity.Info");
+	return DefaultBrush;
 }
 
 
-FReply SPluginWindow::OnButtonClicked() {
+FReply SPluginWindow::SelectFile () {
 	/*
 	* Handles button click. Probably will have to rename
 	*/
@@ -141,10 +157,10 @@ FReply SPluginWindow::OnButtonClicked() {
 				// Stores selected files/folder in outnames
 				bool BOpened = DesktopPlatform->OpenFileDialog(NativeWinHandle, TEXT("Open folder"), "d:\\", FString(""),
 					TEXT("GeoTIFF |*.tiff; *.tif"), 0, OutNames);
-					// Image File | *.png;| <- png files, dropping for now June 15th
+				// Image File | *.png;| <- png files, dropping for now June 15th
 
 				if (BOpened && OutNames.Num() > 0) {
-					
+
 					// Gets first item in array
 					SelectedFilePath = OutNames[0];
 
@@ -154,10 +170,10 @@ FReply SPluginWindow::OnButtonClicked() {
 						PreviewTexture->RemoveFromRoot();
 						PreviewTexture = nullptr;
 					}
-					
+
 					// Sets new texture created from GeoTIFF
 					PreviewTexture = SPluginWindow::GeneratePreview(SelectedFilePath);
-					
+
 					// Adds the texture to root
 					if (PreviewTexture) {
 						PreviewTexture->AddToRoot();
@@ -168,13 +184,19 @@ FReply SPluginWindow::OnButtonClicked() {
 							FVector2D(400.0f, 320.0f),
 							FName(*SelectedFilePath)
 						);
+
+						EnableConfirm = true;
 					}
-					
+
 					UE_LOG(LogTemp, Log, TEXT("Selected File: %s"), *SelectedFilePath)
 	}	}	}	} // I will not be undoing this, it looks funny
 	return FReply::Handled();
 }
 
+FReply SPluginWindow::ConfirmFile() {
+	//UE_LOG(LogTemp, Error, TEXT("file logged, this is red to stand out. not an error"))
+	return FReply::Handled();
+}
 
 void SPluginWindow::CopyFile(FString& FilePath) {
 	/*
@@ -194,7 +216,8 @@ void SPluginWindow::CopyFile(FString& FilePath) {
 
 	if (PlatformFile.CopyFile(*DestPath, *FilePath)) {
 		UE_LOG(LogTemp, Log, TEXT("File copied to: %s"), *DestPath);
-	} else {
+	}
+	else {
 		UE_LOG(LogTemp, Warning, TEXT("Failed to copy file to: %s"), *DestPath);
 	}
 }
@@ -212,7 +235,7 @@ void SPluginWindow::LoadPythonFile() {
 		UE_LOG(LogTemp, Error, TEXT("Python Script Plugin is not available!"));
 		return;
 	}
-	
+
 	// Imports file and executes it
 	// This runs all the imports and anything not within a "def"
 	// Reloads the .py file in the event its already been loaded
@@ -248,9 +271,9 @@ UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
 	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
 	Ex.Command = FString::Format(TEXT("GIS_Data_Processor.lowResolutionPreview('{0}')"), { SafePath });
-	
+
 	// Run command and check if it fails
-	if(!SPluginWindow::ErrorCheck(Ex)) return nullptr;
+	if (!SPluginWindow::ErrorCheck(Ex)) return nullptr;
 
 	// function returns string, this will remove whitespace
 	FString TempPath = Ex.CommandResult.TrimStartAndEnd();
@@ -293,11 +316,10 @@ bool SPluginWindow::ErrorCheck(FPythonCommandEx& command) {
 }
 
 
-
 UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 	/*
 	* Creates a Texture2D from bytes
-	* 
+	*
 	* prior method was using had a bunch of warniings to not us it and to use FImage so yeah
 	*/
 	UE_LOG(LogTemp, Log, TEXT("BytesToTexture received %d bytes"), ImageBytes.Num());
