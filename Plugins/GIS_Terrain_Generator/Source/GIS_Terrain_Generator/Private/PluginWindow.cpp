@@ -3,6 +3,8 @@
 
 #include "PluginWindow.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SWidgetSwitcher.h"
+
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Images/SImage.h"
@@ -19,67 +21,18 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 {
 	SPluginWindow::LoadPythonFile();
 	DefaultBrush = FAppStyle::Get().GetBrush("Productivity.Info");
-	EnableConfirm = false;
 
 	ChildSlot
 		[
-			SNew(SVerticalBox)
-				// Heading slot
-				+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
+			SAssignNew(WidgetSwitcher, SWidgetSwitcher)
+				+SWidgetSwitcher::Slot()
 				[
-					SNew(STextBlock).Text(INVTEXT("Terrain Generation"))
-						.Font(FCoreStyle::Get().GetFontStyle("HeadingMain"))
+					SPluginWindow::PreviewPage()
 				]
-				// Section with a border detail
-				+ SVerticalBox::Slot().AutoHeight().Padding(2.0f)
+				+ SWidgetSwitcher::Slot()
 				[
-					SNew(SBorder)
-						.BorderImage(FAppStyle::GetBrush("ToolPanel.GroupBorder"))
-						.Padding(4.0f)
-						[
-							SNew(SVerticalBox)
-								+ SVerticalBox::Slot().AutoHeight().Padding(4.0f)
-								[
-									SNew(SHorizontalBox)
-										+ SHorizontalBox::Slot().AutoWidth().Padding(10.0f)
-										[
-											SNew(SVerticalBox)
-												+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
-												[
-													SNew(SButton)
-														.Text(INVTEXT("Select File")).HAlign(HAlign_Center)
-														.OnClicked(this, &SPluginWindow::SelectFile)
-												]
-												+SVerticalBox::Slot()
-												[
-													SNew(SSpacer).Size(FVector2D(0, 20))
-												]
-												+SVerticalBox::Slot().AutoHeight().Padding(10.0f)
-												[
-													SNew(SButton)
-														.Text(INVTEXT("Confirm")).HAlign(HAlign_Center)
-														.IsEnabled(false)
-														.OnClicked(this, &SPluginWindow::ConfirmFile)
-												]
-										]
-									+ SHorizontalBox::Slot().AutoWidth().Padding(4.0f)
-										[
-											SNew(SVerticalBox)
-												+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
-												[	
-													SNew(STextBlock).Text(INVTEXT("GeoTIFF Preview"))
-												]
-												+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
-												[
-													SNew(SImage)
-														.Image(this, &SPluginWindow::GetMyBrush)
-														.DesiredSizeOverride(FVector2D(400.0f, 400.0f))
-												]
-										]
-								]
-						]
+					SPluginWindow::GISMapPage()
 				]
-
 		];
 
 
@@ -100,23 +53,107 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 	*/
 };
 
+TSharedRef<SWidget> SPluginWindow::PreviewPage() {
 
-SPluginWindow::~SPluginWindow() {
-	if (PreviewTexture)
-	{
-		PreviewTexture->RemoveFromRoot();
-	}
+	return SNew(SVerticalBox)
+		// Heading slot
+		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
+		[
+			SNew(STextBlock).Text(INVTEXT("Terrain Generation"))
+				.Font(FCoreStyle::Get().GetFontStyle("HeadingMain"))
+		]
+		// Section with a border detail
+		+ SVerticalBox::Slot().AutoHeight().Padding(2.0f)
+		[
+			SNew(SBorder)
+				.BorderImage(FAppStyle::GetBrush("ToolPanel.GroupBorder"))
+				.Padding(4.0f)
+				[
+					SNew(SVerticalBox)
+						+ SVerticalBox::Slot().AutoHeight().Padding(4.0f)
+						[
+							SNew(SHorizontalBox)
+								+ SHorizontalBox::Slot().AutoWidth().Padding(10.0f)
+								[
+									SNew(SVerticalBox)
+										+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
+										[
+											SNew(SButton)
+												.Text(INVTEXT("Select File")).HAlign(HAlign_Center)
+												.OnClicked(this, &SPluginWindow::SelectFile)
+										]
+										+ SVerticalBox::Slot()
+										[
+											SNew(SSpacer).Size(FVector2D(0, 20))
+										]
+										+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
+										[
+											SNew(SButton)
+												.Text(INVTEXT("Clear")).HAlign(HAlign_Center)
+												.IsEnabled(this, &SPluginWindow::IsFileSelected)
+												.OnClicked(this, &SPluginWindow::ClearBrush)
+										]
+										+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
+										[
+											SNew(SButton)
+												.Text(INVTEXT("Confirm")).HAlign(HAlign_Center)
+												.IsEnabled(this, &SPluginWindow::IsFileSelected)
+												.OnClicked(this, &SPluginWindow::ConfirmFile)
+										]
+								]
+							+ SHorizontalBox::Slot().AutoWidth().Padding(4.0f)
+								[
+									SNew(SVerticalBox)
+										+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
+										[
+											SNew(STextBlock).Text(INVTEXT("GeoTIFF Preview"))
+										]
+										+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
+										[
+											SNew(SImage)
+												.Image(this, &SPluginWindow::GetMyBrush)
+												.DesiredSizeOverride(FVector2D(400.0f, 400.0f))
+										]
+								]
+						]
+				]
+		];
 }
 
 
-const FSlateBrush* SPluginWindow::GetMyBrush() const {
+
+TSharedRef<SWidget> SPluginWindow::GISMapPage()
+{
+	return SNew(SVerticalBox)
+		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
+		[
+			SNew(STextBlock).Text(INVTEXT("My Second Page"))
+				.Font(FCoreStyle::Get().GetFontStyle("HeadingMain"))
+		]
+		+SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
+		[
+			SNew(SButton)
+				.Text(INVTEXT("Go Back")).HAlign(HAlign_Center)
+				.OnClicked(this, &SPluginWindow::GoToPreviewPage)
+		];
+}
+
+
+FReply SPluginWindow::GoToPreviewPage()
+{
+	WidgetSwitcher->SetActiveWidgetIndex(0);
+	return FReply::Handled();
+}
+
+
+
+const FSlateBrush* SPluginWindow::GetMyBrush() const{
 	/*
 	* Gets texture for brush
 	* Has a fallback when there is no brush available
 	*/
 	if (DynamicBrush.IsValid()) {
 		// If texture exists for brush, loads it and returns it
-		UE_LOG(LogTemp, Log, TEXT("Successfully loaded custom image"));
 		return DynamicBrush.Get();
 	}
 
@@ -124,9 +161,10 @@ const FSlateBrush* SPluginWindow::GetMyBrush() const {
 }
 
 
-FReply SPluginWindow::SelectFile () {
+
+FReply SPluginWindow::SelectFile() {
 	/*
-	* Handles button click. Probably will have to rename
+	* Handles button click
 	*/
 
 	// Generic pointer type, Gets converted later
@@ -193,10 +231,35 @@ FReply SPluginWindow::SelectFile () {
 	return FReply::Handled();
 }
 
+
+
 FReply SPluginWindow::ConfirmFile() {
-	//UE_LOG(LogTemp, Error, TEXT("file logged, this is red to stand out. not an error"))
+	WidgetSwitcher->SetActiveWidgetIndex(1);
+	UE_LOG(LogTemp, Error, TEXT("file logged, this is red to stand out. not an error"))
 	return FReply::Handled();
 }
+
+
+
+FReply SPluginWindow::ClearBrush() {
+
+	if (DynamicBrush.IsValid())
+	{
+		DynamicBrush.Reset();
+	}
+
+	EnableConfirm = false;
+
+	return FReply::Handled();
+}
+
+
+
+bool SPluginWindow::IsFileSelected() const{
+	return EnableConfirm;
+}
+
+
 
 void SPluginWindow::CopyFile(FString& FilePath) {
 	/*
@@ -223,6 +286,7 @@ void SPluginWindow::CopyFile(FString& FilePath) {
 }
 
 
+
 void SPluginWindow::LoadPythonFile() {
 	/*
 	* Creates instance of python script plugin
@@ -246,6 +310,7 @@ void SPluginWindow::LoadPythonFile() {
 }
 
 
+
 void SPluginWindow::GenerateRaster() {
 	/*
 	* Generates raster segments of full GeoTiff
@@ -259,6 +324,7 @@ void SPluginWindow::GenerateRaster() {
 
 	if (!SPluginWindow::ErrorCheck(Ex)) return;
 }
+
 
 
 UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
@@ -302,6 +368,7 @@ UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 }
 
 
+
 bool SPluginWindow::ErrorCheck(FPythonCommandEx& command) {
 	/*
 	* This is what executes commands. Probably will rename to better fit
@@ -314,6 +381,7 @@ bool SPluginWindow::ErrorCheck(FPythonCommandEx& command) {
 	}
 	return true;
 }
+
 
 
 UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
@@ -350,4 +418,13 @@ UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 	}
 
 	return nullptr;
+}
+
+
+
+SPluginWindow::~SPluginWindow() {
+	if (PreviewTexture)
+	{
+		PreviewTexture->RemoveFromRoot();
+	}
 }

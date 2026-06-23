@@ -17,31 +17,41 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
+
+	virtual ~SPluginWindow();
 private:
+
+	TSharedRef<SWidget> PreviewPage();
+	TSharedRef<SWidget> GISMapPage();
 	
 	TSharedPtr<FSlateDynamicImageBrush> DynamicBrush;
+
+	TSharedPtr<SWidgetSwitcher> WidgetSwitcher;
+	int8 ActiveWidgetIndex{ 0 };
+
 	const FSlateBrush* DefaultBrush;
+	const FSlateBrush* GetMyBrush() const;
+
 	FReply SelectFile();
 	FReply ConfirmFile();
+	FReply ClearBrush();
+	FReply GoToPreviewPage();
+
 	FString SelectedFilePath;
 	
 	UTexture2D* BytesToTexture(const TArray<uint8>& ImageBytes);
-	UTexture2D* PreviewTexture = nullptr;
+	UTexture2D* PreviewTexture{ nullptr };
 	UTexture2D* GeneratePreview(FString&);
 
 	IPythonScriptPlugin* PythonPlugin;
-	
-	const FSlateBrush* GetMyBrush() const;
 	
 	FPythonCommandEx Ex;
 
 	void LoadPythonFile();
 	void CopyFile(FString&);
 	void GenerateRaster();
+
 	bool ErrorCheck(FPythonCommandEx&);
-
-	bool EnableConfirm;
-
-public:
-	virtual ~SPluginWindow();
+	bool EnableConfirm{ false };
+	bool IsFileSelected() const;
 };
