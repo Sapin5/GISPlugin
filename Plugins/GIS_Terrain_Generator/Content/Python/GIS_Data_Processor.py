@@ -8,6 +8,7 @@ import numpy as np
 import io
 import tempfile
 
+from multiprocessing import Process, set_start_method
 from PIL import Image
 from collections import namedtuple
 from rasterio.windows import Window as Window
@@ -18,16 +19,18 @@ Segment = namedtuple('Segment', ['width', 'height', 'subdivisions'])
 Stats = namedtuple('Stats',['min', 'max'])
 Shape = namedtuple('Shape', ['rows', 'cols'])
 
-output_dir = os.path.join(Path(__file__).parent, "raster_segments")
+
+output_dir = os.path.join(Path(__file__).parents[1], "raster_segments")
 
 
 def outPutFolders():
     """
     Create output directories
     """
-    # Potentially change this to create unique directoriesor allow user to select directory
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
+
+
 
 def getWindowSize(totalWidth, totalHeight):
     """
@@ -49,6 +52,8 @@ def getWindowSize(totalWidth, totalHeight):
     # print(f"Resolution scaling ({windowWidth}, {windowHeight}). Subdivisions {subdivisions}")
     return Segment(windowWidth, windowHeight, subdivisions)
 
+
+
 def getMinMax(data):
     """
     Finds the min and max values in data set 
@@ -59,6 +64,8 @@ def getMinMax(data):
     globalMax = globalStats.max
     del globalStats
     return Stats(globalMin, globalMax)
+
+
 
 def processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape):
     """
@@ -72,8 +79,8 @@ def processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape):
     for i, rowOff in enumerate(range(0, data.height, windowInfo.height)):
         for j, colOff in enumerate(range(0, data.width, windowInfo.width)):
 
-            current = i * totalRowsAndCols.cols + j + 1
-            total = totalRowsAndCols.cols*totalRowsAndCols.rows
+            # current = i * totalRowsAndCols.cols + j + 1
+            # total = totalRowsAndCols.cols*totalRowsAndCols.rows
             # Find first windows width
             # Find first windows height 
             wWidth  = min(windowInfo.width, data.width - colOff)
@@ -103,13 +110,23 @@ def processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape):
             # print(f"Processed {current}/{total} segments")
 
 
+
 def main(file_path):
     """
     Loads, process, and outputs GeoTIFF raster
+
+    attempted multi threading and subprocess, neither worked. 
+    will be moving over to unreal for this most likely
     """
-
+    set_start_method('spawn', force=True)
     outPutFolders()
+    # generateRaster(file_path)
+    p = Process(target=generateRaster, args=(file_path, ) )
+    p.daemon = True
+    p.start()
 
+
+def generateRaster(file_path):
     # Open file and load data into memory
     # ALso closes
     with rasterio.open(file_path) as data:
@@ -129,12 +146,17 @@ def main(file_path):
         globalStats = getMinMax(data)
         processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape)
 
+
+
+
 def hello():
     """ 
     Temporary function for testing calling python functions in unreal
     """
     # print("hello asoiudboasidoiasbdoiabdsoia")
     i = 1
+
+
 
 def lowResolutionPreview(file_path):
     """

@@ -139,6 +139,7 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 }
 
 
+
 FReply SPluginWindow::GoToPreviewPage()
 {
 	WidgetSwitcher->SetActiveWidgetIndex(0);
@@ -235,6 +236,7 @@ FReply SPluginWindow::SelectFile() {
 
 FReply SPluginWindow::ConfirmFile() {
 	WidgetSwitcher->SetActiveWidgetIndex(1);
+	SPluginWindow::GenerateRaster(SelectedFilePath);
 	UE_LOG(LogTemp, Error, TEXT("file logged, this is red to stand out. not an error"))
 	return FReply::Handled();
 }
@@ -303,15 +305,19 @@ void SPluginWindow::LoadPythonFile() {
 	// Imports file and executes it
 	// This runs all the imports and anything not within a "def"
 	// Reloads the .py file in the event its already been loaded
-	FPythonCommandEx Import;
-	Import.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
-	Import.Command = TEXT("import importlib, GIS_Data_Processor; importlib.reload(GIS_Data_Processor)");
-	if (!SPluginWindow::ErrorCheck(Import)) return;
+	FPythonCommandEx ImportGIS;
+	ImportGIS.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
+	ImportGIS.Command = TEXT("import importlib, GIS_Data_Processor; importlib.reload(GIS_Data_Processor)");
+
+	// FPythonCommandEx ImportSubP;
+	// ImportSubP.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
+	// ImportSubP.Command = TEXT("import importlib, SubProcessFile; importlib.reload(SubProcessFile)");
+	// if (!SPluginWindow::ErrorCheck(ImportGIS) || !SPluginWindow::ErrorCheck(ImportSubP)) return;
 }
 
 
 
-void SPluginWindow::GenerateRaster() {
+void SPluginWindow::GenerateRaster(FString& FilePath) {
 	/*
 	* Generates raster segments of full GeoTiff
 	* This is needed since unreal cannot always process raw GeoTIFFS
@@ -319,8 +325,18 @@ void SPluginWindow::GenerateRaster() {
 	* created .png files are added directly to folders which bypasses unreals import
 	* which unreal does not like. This is gonna be a headache
 	*/
-	Ex.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
-	Ex.Command = TEXT("GIS_Data_Processor.hello()");
+	// Ex.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
+	// Ex.Command = TEXT("GIS_Data_Processor.hello()");
+
+	// Theres a slight chance that if the file path contains ../n/..
+	// python will read the filepath and make a newline this prevents that
+	FString SafePath = FilePath.Replace(TEXT("\\"), TEXT("/"));
+
+	// prepares command for execution
+	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
+	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
+	Ex.Command = FString::Format(TEXT("GIS_Data_Processor.main('{0}')"), { SafePath });
+
 
 	if (!SPluginWindow::ErrorCheck(Ex)) return;
 }

@@ -49,7 +49,7 @@ private:
 
 	void LoadPythonFile();
 	void CopyFile(FString&);
-	void GenerateRaster();
+	void GenerateRaster(FString&);
 
 	bool ErrorCheck(FPythonCommandEx&);
 	bool EnableConfirm{ false };
