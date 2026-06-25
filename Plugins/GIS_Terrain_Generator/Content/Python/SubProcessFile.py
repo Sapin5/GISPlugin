@@ -1,10 +1,10 @@
-import init_unreal
 import subprocess
 import sys
 import os
 from pathlib import Path
 
 main_file_dir = os.path.join(Path(__file__).parent, "GIS_Data_Processor.py")
+engine_python = Path(os.environ.get("UE_PYTHONPATH", "")) 
 
 """
     This file only exists because calling GIS_Data_Processor caused unreal to freeze up
@@ -14,4 +14,5 @@ main_file_dir = os.path.join(Path(__file__).parent, "GIS_Data_Processor.py")
 """
 
 def main(file_path):
-    subprocess.Popen(["python", main_file_dir, file_path])
+    subprocess.Popen([str(engine_python), main_file_dir, file_path],
+                     cwd=str(Path(__file__).parent))

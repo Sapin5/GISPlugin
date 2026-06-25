@@ -309,10 +309,10 @@ void SPluginWindow::LoadPythonFile() {
 	ImportGIS.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
 	ImportGIS.Command = TEXT("import importlib, GIS_Data_Processor; importlib.reload(GIS_Data_Processor)");
 
-	// FPythonCommandEx ImportSubP;
-	// ImportSubP.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
-	// ImportSubP.Command = TEXT("import importlib, SubProcessFile; importlib.reload(SubProcessFile)");
-	// if (!SPluginWindow::ErrorCheck(ImportGIS) || !SPluginWindow::ErrorCheck(ImportSubP)) return;
+	FPythonCommandEx ImportSubP;
+	ImportSubP.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
+	ImportSubP.Command = TEXT("import importlib, SubProcessFile; importlib.reload(SubProcessFile)");
+	if (!SPluginWindow::ErrorCheck(ImportGIS) || !SPluginWindow::ErrorCheck(ImportSubP)) return;
 }
 
 
@@ -335,9 +335,7 @@ void SPluginWindow::GenerateRaster(FString& FilePath) {
 	// prepares command for execution
 	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
 	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
-	Ex.Command = FString::Format(TEXT("GIS_Data_Processor.main('{0}')"), { SafePath });
-
-
+	Ex.Command = FString::Format(TEXT("SubProcessFile.main('{0}')"), { SafePath });
 	if (!SPluginWindow::ErrorCheck(Ex)) return;
 }
 
