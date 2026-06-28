@@ -28,5 +28,3 @@ if not(os.path.exists(image_folder)):
 
 # Add libraries to python path so all other files can use them
 sys.path.insert(0, lib_folder)
-
-print("asjdlaskndlaksndlaksn")

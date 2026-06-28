@@ -1,24 +1,29 @@
-import init_unreal
+# import init_unreal
 import sys
 import os
-import unreal
+from pathlib import Path
+
+current_folder = Path(__file__).parent
+lib_folder = os.path.join(current_folder, 'lib')
+sys.path.insert(0, lib_folder)
+
+
 import rasterio
 import math
 import numpy as np
 import io
 import tempfile
+import time
 
-from multiprocessing import Process, set_start_method
 from PIL import Image
 from collections import namedtuple
 from rasterio.windows import Window as Window
-from pathlib import Path
+
 
 # Creating "Structs" to keep data passed coherent and simple
 Segment = namedtuple('Segment', ['width', 'height', 'subdivisions'])
 Stats = namedtuple('Stats',['min', 'max'])
 Shape = namedtuple('Shape', ['rows', 'cols'])
-
 
 output_dir = os.path.join(Path(__file__).parents[1], "raster_segments")
 
@@ -111,21 +116,6 @@ def processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape):
 
 
 
-def main(file_path):
-    """
-    Loads, process, and outputs GeoTIFF raster
-
-    attempted multi threading and subprocess, neither worked. 
-    will be moving over to unreal for this most likely
-    """
-    set_start_method('spawn', force=True)
-    outPutFolders()
-    # generateRaster(file_path)
-    p = Process(target=generateRaster, args=(file_path, ) )
-    p.daemon = True
-    p.start()
-
-
 def generateRaster(file_path):
     # Open file and load data into memory
     # ALso closes
@@ -145,16 +135,6 @@ def generateRaster(file_path):
         # Get dataset min max
         globalStats = getMinMax(data)
         processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape)
-
-
-
-
-def hello():
-    """ 
-    Temporary function for testing calling python functions in unreal
-    """
-    # print("hello asoiudboasidoiasbdoiabdsoia")
-    i = 1
 
 
 
@@ -182,3 +162,21 @@ def lowResolutionPreview(file_path):
     tmp.close()
 
     return tmp.name
+
+
+
+def main(file_path):
+    """
+    Loads, process, and outputs GeoTIFF raster
+
+    attempted multi threading and subprocess, neither worked. 
+    will be moving over to unreal for this most likely
+    """
+    outPutFolders()
+    generateRaster(file_path)
+
+
+
+if __name__ == "__main__":
+    main(sys.argv[1])
+    
