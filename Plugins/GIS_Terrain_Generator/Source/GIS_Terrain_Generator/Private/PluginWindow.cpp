@@ -302,9 +302,7 @@ void SPluginWindow::LoadPythonFile() {
 		return;
 	}
 
-	// Imports file and executes it
-	// This runs all the imports and anything not within a "def"
-	// Reloads the .py file in the event its already been loaded
+	// Imports files
 	FPythonCommandEx ImportGIS;
 	ImportGIS.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
 	ImportGIS.Command = TEXT("import importlib, GIS_Data_Processor; importlib.reload(GIS_Data_Processor)");
@@ -325,8 +323,6 @@ void SPluginWindow::GenerateRaster(FString& FilePath) {
 	* created .png files are added directly to folders which bypasses unreals import
 	* which unreal does not like. This is gonna be a headache
 	*/
-	// Ex.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
-	// Ex.Command = TEXT("GIS_Data_Processor.hello()");
 
 	// Theres a slight chance that if the file path contains ../n/..
 	// python will read the filepath and make a newline this prevents that
@@ -402,7 +398,7 @@ UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 	/*
 	* Creates a Texture2D from bytes
 	*
-	* prior method was using had a bunch of warniings to not us it and to use FImage so yeah
+	* prior method was using had a bunch of warnings to not us it and to use FImage so yeah
 	*/
 	UE_LOG(LogTemp, Log, TEXT("BytesToTexture received %d bytes"), ImageBytes.Num());
 
@@ -412,26 +408,43 @@ UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 
 	// Create FImage from bytes, for some reason this is in the wrong colour channels
 	if (FImageUtils::DecompressImage(ImageBytes.GetData(), ImageBytes.Num(), OutImage)) {
-
-		// Force colour channel to valid
-		OutImage.ChangeFormat(ERawImageFormat::BGRA8, EGammaSpace::sRGB);
-
-		// Create actual texture 2D
-		Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
-
-		if (Texture) {
-			// Optimize the texture specifically for Editor UI rendering
-			Texture->SRGB = true;
-			Texture->CompressionSettings = TC_EditorIcon;
-			Texture->LODGroup = TEXTUREGROUP_UI;
-			Texture->NeverStream = true;
-			Texture->UpdateResource();
-
-			return Texture;
-		}
+		return SPluginWindow::OptimizeImage(Texture, OutImage);
 	}
 
 	return nullptr;
+}
+
+
+
+UTexture2D* SPluginWindow::RasterSegmentToTexture(const FString& FilePath)
+{
+	FImage OutImage;
+	UTexture2D* Texture{ nullptr };
+
+	if (FImageUtils::LoadImage(*FilePath, OutImage)) {
+		return SPluginWindow::OptimizeImage(Texture, OutImage);
+	}
+
+	return nullptr;
+}
+
+
+
+UTexture2D* SPluginWindow::OptimizeImage(UTexture2D* Texture, FImage OutImage) {
+	// Force colour channel to valid 
+	// For some reason unreal uses BRGA instead of RGBA?????
+	OutImage.ChangeFormat(ERawImageFormat::BGRA8, EGammaSpace::sRGB);
+
+	// Create actual texture 2D
+	Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
+
+	// Optimize the texture specifically for Editor UI rendering
+	Texture->CompressionSettings = TC_EditorIcon;
+	Texture->LODGroup = TEXTUREGROUP_UI;
+	Texture->NeverStream = true;
+	Texture->UpdateResource();
+
+	return Texture;
 }
 
 

@@ -42,6 +42,9 @@ private:
 	UTexture2D* BytesToTexture(const TArray<uint8>& ImageBytes);
 	UTexture2D* PreviewTexture{ nullptr };
 	UTexture2D* GeneratePreview(FString&);
+	UTexture2D* RasterSegmentToTexture(const FString&);
+	UTexture2D* OptimizeImage(UTexture2D*, FImage);
+
 
 	IPythonScriptPlugin* PythonPlugin;
 	
