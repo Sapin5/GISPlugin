@@ -37,6 +37,7 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 
 
 	// Combo button could be useful later
+	// This section si for slate stuff I deleted butt could be usefull later
 	/*
 	SNew(SComboButton)
 	.ButtonContent()
@@ -127,16 +128,47 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 	return SNew(SVerticalBox)
 		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
 		[
-			SNew(STextBlock).Text(INVTEXT("My Second Page"))
+			SNew(STextBlock).Text(INVTEXT("Generating High Resolution Map"))
 				.Font(FCoreStyle::Get().GetFontStyle("HeadingMain"))
 		]
-		+SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
+		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
+		[
+			SNew(STextBlock).Text_Lambda([this]()
+				{
+					return SPluginWindow::PollRasterGeneration() ? INVTEXT("Done") : INVTEXT("Running...");
+				})
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
 		[
 			SNew(SButton)
 				.Text(INVTEXT("Go Back")).HAlign(HAlign_Center)
 				.OnClicked(this, &SPluginWindow::GoToPreviewPage)
 		];
+	/*
+	* TODO:
+	* Change this to load images dynamically after the raster generation is done. Maybe make the loading screen widget transition to this?
+		+SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
+		[
+			SNew(SHorizontalBox)
+				+SHorizontalBox::Slot().AutoWidth().Padding(10.0f).HAlign(HAlign_Center)
+				[
+					SNew(SGridPanel)
+				]
+		];
+	*/
 }
+
+
+
+bool SPluginWindow::PollRasterGeneration() {
+	if (RasterDone) return true;
+	Ex = FPythonCommandEx();
+	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement;
+	Ex.Command = FString::Format(TEXT("SubProcessFile.poll()"), { "" });
+	SPluginWindow::ErrorCheck(Ex);
+	RasterDone = (Ex.CommandResult == "True");
+	return RasterDone;
+};
 
 
 
@@ -236,10 +268,11 @@ FReply SPluginWindow::SelectFile() {
 
 FReply SPluginWindow::ConfirmFile() {
 	/*
-	  Change widget to highlight and select screen
+	  Change widget to highlight and select screen 
 	*/
 	WidgetSwitcher->SetActiveWidgetIndex(1);
 	SPluginWindow::GenerateRaster(SelectedFilePath);
+
 	UE_LOG(LogTemp, Error, TEXT("file logged, this is red to stand out. not an error"))
 	return FReply::Handled();
 }
@@ -261,9 +294,9 @@ FReply SPluginWindow::ClearBrush() {
 
 
 
-// So unreal is dumb and I have to do this to update button states in slate
-// I want to cry
 bool SPluginWindow::IsFileSelected() const{
+	// So unreal is dumb and I have to do this to update button states in slate
+// I want to cry
 	return EnableConfirm;
 }
 
@@ -362,9 +395,6 @@ UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 	// Python can use single quotes for strings, this is just gonna remove that
 	TempPath = TempPath.Replace(TEXT("'"), TEXT("")).Replace(TEXT("\""), TEXT(""));
 
-	UE_LOG(LogTemp, Log, TEXT("Python returned: '%s'"), *Ex.CommandResult);
-	UE_LOG(LogTemp, Log, TEXT("Parsed TempPath: '%s'"), *TempPath);
-
 	// Array to hold the raw binary data of the image
 	TArray<uint8> ImageBytes;
 
@@ -406,8 +436,7 @@ UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 	*
 	* prior method was using had a bunch of warnings to not us it and to use FImage so yeah
 	*/
-	UE_LOG(LogTemp, Log,
-	TEXT("BytesToTexture received %d bytes"), ImageBytes.Num());
+	UE_LOG(LogTemp, Log, TEXT("BytesToTexture received %d bytes"), ImageBytes.Num());
 
 	// Create variables
 	FImage OutImage;
@@ -431,7 +460,7 @@ UTexture2D* SPluginWindow::RasterSegmentToTexture(const FString& FilePath)
 	if (FImageUtils::LoadImage(*FilePath, OutImage)) {
 		return SPluginWindow::OptimizeImage(Texture, OutImage);
 	}
-
+	
 	return nullptr;
 }
 
