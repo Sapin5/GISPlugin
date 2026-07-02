@@ -16,6 +16,8 @@ public:
 	SPreviewWindow();
 	~SPreviewWindow();
 
+	FReply ConfirmFile();
+
 private:
 
 };

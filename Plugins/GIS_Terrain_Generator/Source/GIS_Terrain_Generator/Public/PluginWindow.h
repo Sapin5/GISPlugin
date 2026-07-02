@@ -7,6 +7,21 @@
 #include "Brushes/SlateDynamicImageBrush.h"
 #include "DesktopPlatformModule.h"
 #include "IPythonScriptPlugin.h"
+#include "GISLandscapeGeneration.h"
+
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SWidgetSwitcher.h"
+
+#include "Widgets/Text/STextBlock.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Images/SImage.h"
+#include "Misc/Paths.h"
+#include "Engine/Texture2D.h"
+
+#include "ImageUtils.h"
+#include "ImageCore.h"
+#include "ImageCoreUtils.h"
+
 /**
  *
  */
