@@ -40,6 +40,9 @@ def outPutFolders():
 def getWindowSize(totalWidth, totalHeight):
     """
     Gets window size for segmentation and data parsing
+
+    This logic likely needs to be reworked, I threw this together really fast
+    Likely just add padding to the edges if the geoTIFF is not even
     """
     windowHeight = totalHeight
     windowWidth  = totalWidth
@@ -72,7 +75,7 @@ def getMinMax(data):
 
 
 
-def processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape):
+def processData(data, totalRowsAndCols, windowInfo, globalStats):
     """
     Processes the data and creates raster segments
     Outputs the segments to folder for them to be later stitched
@@ -118,7 +121,7 @@ def processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape):
 
 def generateRaster(file_path):
     # Open file and load data into memory
-    # ALso closes
+    # Also closes
     with rasterio.open(file_path) as data:
         
         # Creates window size for segmenting
@@ -128,13 +131,10 @@ def generateRaster(file_path):
         totalRowsAndCols = Shape(math.ceil(data.width / windowInfo.width),
                                 math.ceil(data.height / windowInfo.height))
 
-        # Currently unused, might delete later
-        targetShape = (math.ceil(windowInfo.height/windowInfo.subdivisions), 
-                    math.ceil(windowInfo.width/windowInfo.subdivisions))
 
         # Get dataset min max
         globalStats = getMinMax(data)
-        processData(data, totalRowsAndCols, windowInfo, globalStats, targetShape)
+        processData(data, totalRowsAndCols, windowInfo, globalStats)
 
 
 
@@ -153,7 +153,6 @@ def lowResolutionPreview(file_path):
     img = Image.fromarray(normalized)
     img.thumbnail((512, 512))
 
-    # Grayscale conversion jsut to be safe
     if img.mode != "L":
         img = img.convert("L")
 

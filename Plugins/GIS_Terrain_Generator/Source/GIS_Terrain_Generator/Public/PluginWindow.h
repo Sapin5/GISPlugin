@@ -47,6 +47,8 @@ private:
 	const FSlateBrush* DefaultBrush;
 	const FSlateBrush* GetMyBrush() const;
 
+
+
 	FReply SelectFile();
 	FReply ConfirmFile();
 	FReply ClearBrush();
@@ -72,4 +74,7 @@ private:
 	bool ErrorCheck(FPythonCommandEx&);
 	bool EnableConfirm{ false };
 	bool IsFileSelected() const;
+
+	bool PollRasterGeneration();
+	bool RasterDone{ false };
 };
