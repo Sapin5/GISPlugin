@@ -2,12 +2,18 @@
 
 
 #include "PluginWindow.h"
+#include "Styling/StyleColors.h"
 
 // I dont like unreal
 void SPluginWindow::Construct(const FArguments& InArgs)
 {
 	SPluginWindow::LoadPythonFile();
 	DefaultBrush = FAppStyle::Get().GetBrush("Productivity.Info");
+
+	for (int32 i = 0; i < 5 * 5; ++i)
+	{
+		TileItems.Add(MakeShared<int32>(i));
+	}
 
 	ChildSlot
 		[
@@ -134,21 +140,55 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
 		[
 			SNew(GISLandscapeGeneration)
-		];
-	/*
-	* TODO:
-	* Change this to load images dynamically after the raster generation is done. Maybe make the loading screen widget transition to this?
+		]
 		+SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
 		[
-			SNew(SHorizontalBox)
-				+SHorizontalBox::Slot().AutoWidth().Padding(10.0f).HAlign(HAlign_Center)
+			SNew(SButton)
+				.Text(INVTEXT("Print Raster Count")).HAlign(HAlign_Center)
+				.OnClicked(this, &SPluginWindow::GetRasterSlot)
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
+		[
+			SNew(SBox)
+				.WidthOverride(5 * 64.0f + 5 * 4.0f) // N columns * ItemWidth + padding slack
+				.HeightOverride(5 * 64.0f + 5 * 4.0f)
 				[
-					SNew(SGridPanel)
+					SAssignNew(TileViewWidget, STileView<TSharedPtr<int32>>)
+						.ListItemsSource(&TileItems)
+						.OnGenerateTile(this, &SPluginWindow::OnGenerateTile)
+						.ItemWidth(64.0f)
+						.ItemHeight(64.0f)
+						.SelectionMode(ESelectionMode::Single)
+						.ItemAlignment(EListItemAlignment::Fill)
 				]
 		];
-	*/
+		
 }
 
+TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, const TSharedRef<STableViewBase>& OwnerTable)
+{
+	return SNew(STableRow<TSharedPtr<int32>>, OwnerTable)
+		[
+			SNew(SBox)
+				.WidthOverride(64.0f)
+				.WidthOverride(64.0f)
+				[
+					SNew(SOverlay)
+						+SOverlay::Slot()
+						[
+							SNew(SImage).Image(DefaultBrush)
+						]
+						+ SOverlay::Slot()
+						.HAlign(HAlign_Center)
+						.VAlign(VAlign_Center)
+						[
+							SNew(STextBlock)
+								.Text(INVTEXT("Raster Segment"))
+								.ColorAndOpacity(EStyleColor::AccentRed)
+						]
+				]
+		];
+}
 
 
 bool SPluginWindow::PollRasterGeneration() {
@@ -420,7 +460,6 @@ bool SPluginWindow::ErrorCheck(FPythonCommandEx& command) {
 }
 
 
-
 UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 	/*
 	* Creates a Texture2D from bytes
@@ -474,6 +513,20 @@ UTexture2D* SPluginWindow::OptimizeImage(UTexture2D* Texture, FImage OutImage) {
 	return Texture;
 }
 
+
+
+FReply SPluginWindow::GetRasterSlot() {
+
+	FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments");
+	FString FilterPath = RasterFolder / TEXT("*");
+
+	// Arguments: (OutputArray, FilePathWithWildcard, Files?, Directories?)
+	IFileManager::Get().FindFiles(FoundFiles, *FilterPath, true, false);
+
+	UE_LOG(LogTemp, Log, TEXT("Testing stuff %d"), FoundFiles.Num());
+
+	return FReply::Handled();
+}
 
 
 SPluginWindow::~SPluginWindow() {

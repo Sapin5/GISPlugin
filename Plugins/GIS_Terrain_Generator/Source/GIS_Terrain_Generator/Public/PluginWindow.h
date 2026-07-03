@@ -15,6 +15,7 @@
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Images/SImage.h"
+#include "Widgets/Views/STileView.h"
 #include "Misc/Paths.h"
 #include "Engine/Texture2D.h"
 
@@ -47,12 +48,13 @@ private:
 	const FSlateBrush* DefaultBrush;
 	const FSlateBrush* GetMyBrush() const;
 
-
+	TArray<FString> FoundFiles;
 
 	FReply SelectFile();
 	FReply ConfirmFile();
 	FReply ClearBrush();
 	FReply GoToPreviewPage();
+	FReply GetRasterSlot();
 
 	FString SelectedFilePath;
 	
@@ -70,6 +72,7 @@ private:
 	void LoadPythonFile();
 	void CopyFile(FString&);
 	void GenerateRaster(FString&);
+	
 
 	bool ErrorCheck(FPythonCommandEx&);
 	bool EnableConfirm{ false };
@@ -77,4 +80,8 @@ private:
 
 	bool PollRasterGeneration();
 	bool RasterDone{ false };
+
+	TArray<TSharedPtr<int32>> TileItems;
+	TSharedPtr<STileView<TSharedPtr<int32>>> TileViewWidget;
+	TSharedRef<ITableRow> OnGenerateTile(TSharedPtr<int32> , const TSharedRef<STableViewBase>&);
 };
