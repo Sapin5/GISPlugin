@@ -41,12 +41,16 @@ private:
 	TSharedRef<SWidget> GISMapPage();
 	
 	TSharedPtr<FSlateDynamicImageBrush> DynamicBrush;
+	TSharedPtr<FSlateDynamicImageBrush> TesterBrush;
 
 	TSharedPtr<SWidgetSwitcher> WidgetSwitcher;
 	int8 ActiveWidgetIndex{ 0 };
 
 	const FSlateBrush* DefaultBrush;
 	const FSlateBrush* GetMyBrush() const;
+	const FSlateBrush* GetMyTesterBrush() const;
+
+	const FSlateBrush* TesterBrush2;
 
 	TArray<FString> FoundFiles;
 
@@ -64,7 +68,6 @@ private:
 	UTexture2D* OptimizeImage(UTexture2D*, FImage);
 
 	TArray<TSharedPtr<SImage>> RasterImages;
-	void LoadRasterImages;
 
 	IPythonScriptPlugin* PythonPlugin;
 	
@@ -73,7 +76,8 @@ private:
 	void LoadPythonFile();
 	void CopyFile(FString&);
 	void GenerateRaster(FString&);
-	
+	void LoadRasterImages();
+
 
 	bool ErrorCheck(FPythonCommandEx&);
 	bool EnableConfirm{ false };

@@ -9,6 +9,7 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 {
 	SPluginWindow::LoadPythonFile();
 	DefaultBrush = FAppStyle::Get().GetBrush("Productivity.Info");
+	TesterBrush2 = FAppStyle::Get().GetBrush("Productivity.Info");
 
 	ChildSlot
 		[
@@ -135,6 +136,8 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
 		[
 			// This doesnt do anything yet and is here for testing stuff
+			// I need to clean up this file and this was a quick test
+			// Will likely break up more
 			SNew(GISLandscapeGeneration)
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
@@ -157,6 +160,8 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 
 TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, const TSharedRef<STableViewBase>& OwnerTable)
 {
+	SPluginWindow::LoadRasterImages();
+
 	return SNew(STableRow<TSharedPtr<int32>>, OwnerTable)
 		[
 			SNew(SBox)
@@ -166,7 +171,8 @@ TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, cons
 					SNew(SOverlay)
 						+SOverlay::Slot()
 						[
-							SNew(SImage).Image(DefaultBrush)
+							SNew(SImage)
+								.Image(this, &SPluginWindow::GetMyTesterBrush)
 						]
 						+ SOverlay::Slot()
 						.HAlign(HAlign_Center)
@@ -179,6 +185,46 @@ TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, cons
 				]
 		];
 }
+
+
+
+void SPluginWindow::LoadRasterImages() {
+	FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments");
+
+	TArray<FString> FoundFiless;
+	IFileManager::Get().FindFiles(FoundFiless, *RasterFolder, TEXT("*.*"));
+
+	FString FirstFilePath;
+
+	if (FoundFiless.Num() > 0)
+	{
+		FirstFilePath = RasterFolder / FoundFiless[0];
+
+		UE_LOG(LogTemp, Log, TEXT("File %s"), *FirstFilePath);
+		TesterBrush = MakeShareable(new FSlateDynamicImageBrush(FName(*FirstFilePath), FVector2D(64.0f, 64.0f)));
+
+		if (TesterBrush) 
+		{
+			TesterBrush2 = TesterBrush.Get();
+		}
+
+	}
+}
+
+
+const FSlateBrush* SPluginWindow::GetMyTesterBrush() const {
+	/*
+	* Gets texture for brush
+	* Has a fallback when there is no brush available
+	*/
+	if (TesterBrush.IsValid()) {
+		// If texture exists for brush, loads it and returns it
+		return TesterBrush.Get();
+	}
+
+	return TesterBrush2;
+}
+
 
 
 bool SPluginWindow::PollRasterGeneration() {
