@@ -10,11 +10,6 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 	SPluginWindow::LoadPythonFile();
 	DefaultBrush = FAppStyle::Get().GetBrush("Productivity.Info");
 
-	for (int32 i = 0; i < 5 * 5; ++i)
-	{
-		TileItems.Add(MakeShared<int32>(i));
-	}
-
 	ChildSlot
 		[
 			SAssignNew(WidgetSwitcher, SWidgetSwitcher)
@@ -139,19 +134,14 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
 		[
+			// This doesnt do anything yet and is here for testing stuff
 			SNew(GISLandscapeGeneration)
-		]
-		+SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
-		[
-			SNew(SButton)
-				.Text(INVTEXT("Print Raster Count")).HAlign(HAlign_Center)
-				.OnClicked(this, &SPluginWindow::GetRasterSlot)
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
 		[
 			SNew(SBox)
-				.WidthOverride(5 * 64.0f + 5 * 4.0f) // N columns * ItemWidth + padding slack
-				.HeightOverride(5 * 64.0f + 5 * 4.0f)
+				.WidthOverride_Lambda([this]() { return RasterCount * 64.0f + RasterCount * 4.0f; })
+				.HeightOverride_Lambda([this]() { return RasterCount * 64.0f + RasterCount * 4.0f; })
 				[
 					SAssignNew(TileViewWidget, STileView<TSharedPtr<int32>>)
 						.ListItemsSource(&TileItems)
@@ -192,11 +182,36 @@ TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, cons
 
 
 bool SPluginWindow::PollRasterGeneration() {
-	if (RasterDone) return true;
+
+	if (RasterDone) {
+		if(!RasterCountDone)
+		{
+			FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments");
+			FString FilterPath = RasterFolder / TEXT("*");
+			IFileManager::Get().FindFiles(FoundFiles, *FilterPath, true, false);
+
+			RasterCount = (int32)FMath::Sqrt((float)FoundFiles.Num());
+
+			for (int32 i = 0; i < RasterCount * RasterCount; ++i)
+			{
+				TileItems.Add(MakeShared<int32>(i));
+			}
+
+			RasterCountDone = true;
+
+			if (TileViewWidget.IsValid())
+			{
+				TileViewWidget->RequestListRefresh();
+			}
+		}
+		return true;
+	}
+
 	Ex = FPythonCommandEx();
 	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement;
 	Ex.Command = FString::Format(TEXT("SubProcessFile.poll()"), { "" });
 	SPluginWindow::ErrorCheck(Ex);
+
 	RasterDone = (Ex.CommandResult == "True");
 	return RasterDone;
 };
@@ -513,20 +528,6 @@ UTexture2D* SPluginWindow::OptimizeImage(UTexture2D* Texture, FImage OutImage) {
 	return Texture;
 }
 
-
-
-FReply SPluginWindow::GetRasterSlot() {
-
-	FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments");
-	FString FilterPath = RasterFolder / TEXT("*");
-
-	// Arguments: (OutputArray, FilePathWithWildcard, Files?, Directories?)
-	IFileManager::Get().FindFiles(FoundFiles, *FilterPath, true, false);
-
-	UE_LOG(LogTemp, Log, TEXT("Testing stuff %d"), FoundFiles.Num());
-
-	return FReply::Handled();
-}
 
 
 SPluginWindow::~SPluginWindow() {

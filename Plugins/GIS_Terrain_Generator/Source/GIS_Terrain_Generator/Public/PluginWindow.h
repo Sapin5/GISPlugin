@@ -54,7 +54,6 @@ private:
 	FReply ConfirmFile();
 	FReply ClearBrush();
 	FReply GoToPreviewPage();
-	FReply GetRasterSlot();
 
 	FString SelectedFilePath;
 	
@@ -64,6 +63,8 @@ private:
 	UTexture2D* RasterSegmentToTexture(const FString&);
 	UTexture2D* OptimizeImage(UTexture2D*, FImage);
 
+	TArray<TSharedPtr<SImage>> RasterImages;
+	void LoadRasterImages;
 
 	IPythonScriptPlugin* PythonPlugin;
 	
@@ -84,4 +85,7 @@ private:
 	TArray<TSharedPtr<int32>> TileItems;
 	TSharedPtr<STileView<TSharedPtr<int32>>> TileViewWidget;
 	TSharedRef<ITableRow> OnGenerateTile(TSharedPtr<int32> , const TSharedRef<STableViewBase>&);
+
+	UINT8 RasterCount{ 0 };
+	bool RasterCountDone{ false };
 };
