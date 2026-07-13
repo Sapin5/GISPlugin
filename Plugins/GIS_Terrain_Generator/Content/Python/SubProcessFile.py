@@ -18,7 +18,6 @@ test = None
 
 def main(file_path):
     global process, test
-    print("hi")
     process = subprocess.Popen([str(engine_python), main_file_dir, file_path],
                                 creationflags=8)
     

@@ -57,7 +57,6 @@ def getWindowSize(totalWidth, totalHeight):
         windowHeight = round(totalHeight/subdivisions) if round(totalHeight/subdivisions) > 256 else 256
         subdivisions+=1
 
-    # print(f"Resolution scaling ({windowWidth}, {windowHeight}). Subdivisions {subdivisions}")
     return Segment(windowWidth, windowHeight, subdivisions)
 
 
@@ -113,9 +112,6 @@ def processData(data, totalRowsAndCols, windowInfo, globalStats):
             filename = os.path.join(output_dir, f"segment_row_{i}_col_{j}.png")
             img = Image.fromarray(normalize16Bit)
             img.save(filename, dpi=(600, 600))
-        
-            # indicator of progress
-            # print(f"Processed {current}/{total} segments")
 
 
 

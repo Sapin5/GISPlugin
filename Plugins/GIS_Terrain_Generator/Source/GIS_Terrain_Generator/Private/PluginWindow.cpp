@@ -158,9 +158,11 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 		
 }
 
+
+
 TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, const TSharedRef<STableViewBase>& OwnerTable)
 {
-	SPluginWindow::LoadRasterImages();
+	int32 Index = Item.IsValid() ? *Item : 0;
 
 	return SNew(STableRow<TSharedPtr<int32>>, OwnerTable)
 		[
@@ -172,15 +174,10 @@ TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, cons
 						+SOverlay::Slot()
 						[
 							SNew(SImage)
-								.Image(this, &SPluginWindow::GetMyTesterBrush)
-						]
-						+ SOverlay::Slot()
-						.HAlign(HAlign_Center)
-						.VAlign(VAlign_Center)
-						[
-							SNew(STextBlock)
-								.Text(INVTEXT("Raster Segment"))
-								.ColorAndOpacity(EStyleColor::AccentRed)
+								.Image_Lambda([this, Index]() -> const FSlateBrush*
+									{
+										return GetMyTesterBrush(Index);
+									})
 						]
 				]
 		];
@@ -194,34 +191,41 @@ void SPluginWindow::LoadRasterImages() {
 	TArray<FString> FoundFiless;
 	IFileManager::Get().FindFiles(FoundFiless, *RasterFolder, TEXT("*.*"));
 
-	FString FirstFilePath;
+	FString	TestFilePath;
+	FImage OutImage;
+	UTexture2D* temp{ nullptr };
 
-	if (FoundFiless.Num() > 0)
-	{
-		FirstFilePath = RasterFolder / FoundFiless[0];
 
-		UE_LOG(LogTemp, Log, TEXT("File %s"), *FirstFilePath);
-		TesterBrush = MakeShareable(new FSlateDynamicImageBrush(FName(*FirstFilePath), FVector2D(64.0f, 64.0f)));
+	for (int i = 0; i < FoundFiless.Num(); i++) {
+		TestFilePath = RasterFolder / FoundFiless[i];
 
-		if (TesterBrush) 
-		{
-			TesterBrush2 = TesterBrush.Get();
+		if (FImageUtils::LoadImage(*TestFilePath, OutImage)) {
+			temp = SPluginWindow::OptimizeImage(OutImage);
 		}
 
+		TesterBrush3.Add(FDeferredCleanupSlateBrush::CreateBrush(temp, FVector2D(64.0f, 64.0f)));
 	}
 }
 
 
-const FSlateBrush* SPluginWindow::GetMyTesterBrush() const {
+
+const FSlateBrush* SPluginWindow::GetMyTesterBrush(int Index) const {
 	/*
 	* Gets texture for brush
 	* Has a fallback when there is no brush available
 	*/
+
+	if (TesterBrush3.IsValidIndex(Index) && TesterBrush3[Index].IsValid()) {
+		return TesterBrush3[Index]->GetSlateBrush();
+	}
+	/*
 	if (TesterBrush.IsValid()) {
 		// If texture exists for brush, loads it and returns it
-		return TesterBrush.Get();
+		// UE_LOG(LogTemp, Log, TEXT("Custom Brush was returned"));
+		return TesterBrush->GetSlateBrush();
 	}
-
+	*/
+	UE_LOG(LogTemp, Log, TEXT("Default Brush was returned"));
 	return TesterBrush2;
 }
 
@@ -232,6 +236,8 @@ bool SPluginWindow::PollRasterGeneration() {
 	if (RasterDone) {
 		if(!RasterCountDone)
 		{
+			SPluginWindow::LoadRasterImages();
+
 			FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments");
 			FString FilterPath = RasterFolder / TEXT("*");
 			IFileManager::Get().FindFiles(FoundFiles, *FilterPath, true, false);
@@ -365,7 +371,7 @@ FReply SPluginWindow::ConfirmFile() {
 	WidgetSwitcher->SetActiveWidgetIndex(1);
 	SPluginWindow::GenerateRaster(SelectedFilePath);
 
-	UE_LOG(LogTemp, Error, TEXT("file logged, this is red to stand out. not an error"))
+	// UE_LOG(LogTemp, Error, TEXT("file logged, this is red to stand out. not an error"))
 	return FReply::Handled();
 }
 
@@ -535,7 +541,7 @@ UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 
 	// Create FImage from bytes, for some reason this is in the wrong colour channels
 	if (FImageUtils::DecompressImage(ImageBytes.GetData(), ImageBytes.Num(), OutImage)) {
-		return SPluginWindow::OptimizeImage(Texture, OutImage);
+		return SPluginWindow::OptimizeImage(OutImage);
 	}
 
 	return nullptr;
@@ -549,7 +555,7 @@ UTexture2D* SPluginWindow::RasterSegmentToTexture(const FString& FilePath)
 	UTexture2D* Texture{ nullptr };
 
 	if (FImageUtils::LoadImage(*FilePath, OutImage)) {
-		return SPluginWindow::OptimizeImage(Texture, OutImage);
+		return SPluginWindow::OptimizeImage(OutImage);
 	}
 	
 	return nullptr;
@@ -557,13 +563,20 @@ UTexture2D* SPluginWindow::RasterSegmentToTexture(const FString& FilePath)
 
 
 
-UTexture2D* SPluginWindow::OptimizeImage(UTexture2D* Texture, FImage OutImage) {
+UTexture2D* SPluginWindow::OptimizeImage(FImage OutImage) {
 	// Force colour channel to valid 
 	// For some reason unreal uses BRGA instead of RGBA?????
-	OutImage.ChangeFormat(ERawImageFormat::BGRA8, EGammaSpace::sRGB);
+
+	if ((int32)OutImage.GammaSpace == 0) {
+		OutImage.ChangeFormat(ERawImageFormat::BGRA8, OutImage.GammaSpace);
+	}
+	else {
+		OutImage.ChangeFormat(ERawImageFormat::BGRA8, EGammaSpace::sRGB);
+	}
+
 
 	// Create actual texture 2D
-	Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
+	UTexture2D* Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
 
 	// Optimize the texture specifically for Editor UI rendering
 	Texture->CompressionSettings = TC_EditorIcon;

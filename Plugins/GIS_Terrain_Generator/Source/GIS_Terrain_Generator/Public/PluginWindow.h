@@ -23,6 +23,8 @@
 #include "ImageCore.h"
 #include "ImageCoreUtils.h"
 
+#include "Slate/DeferredCleanupSlateBrush.h"
+
 /**
  *
  */
@@ -41,14 +43,16 @@ private:
 	TSharedRef<SWidget> GISMapPage();
 	
 	TSharedPtr<FSlateDynamicImageBrush> DynamicBrush;
-	TSharedPtr<FSlateDynamicImageBrush> TesterBrush;
+
+	TSharedPtr<FDeferredCleanupSlateBrush> TesterBrush;
+	TArray<TSharedPtr<FDeferredCleanupSlateBrush>> TesterBrush3;
 
 	TSharedPtr<SWidgetSwitcher> WidgetSwitcher;
 	int8 ActiveWidgetIndex{ 0 };
 
 	const FSlateBrush* DefaultBrush;
 	const FSlateBrush* GetMyBrush() const;
-	const FSlateBrush* GetMyTesterBrush() const;
+	const FSlateBrush* GetMyTesterBrush(int ) const;
 
 	const FSlateBrush* TesterBrush2;
 
@@ -65,7 +69,7 @@ private:
 	UTexture2D* PreviewTexture{ nullptr };
 	UTexture2D* GeneratePreview(FString&);
 	UTexture2D* RasterSegmentToTexture(const FString&);
-	UTexture2D* OptimizeImage(UTexture2D*, FImage);
+	UTexture2D* OptimizeImage(FImage);
 
 	TArray<TSharedPtr<SImage>> RasterImages;
 
@@ -88,8 +92,10 @@ private:
 
 	TArray<TSharedPtr<int32>> TileItems;
 	TSharedPtr<STileView<TSharedPtr<int32>>> TileViewWidget;
-	TSharedRef<ITableRow> OnGenerateTile(TSharedPtr<int32> , const TSharedRef<STableViewBase>&);
+	TSharedRef<ITableRow> OnGenerateTile(TSharedPtr<int32>, const TSharedRef<STableViewBase>&);
 
 	UINT8 RasterCount{ 0 };
 	bool RasterCountDone{ false };
+
+	UINT8 RasterTracker{ 0 };
 };
