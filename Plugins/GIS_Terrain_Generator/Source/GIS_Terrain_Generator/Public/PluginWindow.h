@@ -25,7 +25,6 @@
 
 #include "Slate/DeferredCleanupSlateBrush.h"
 
-
 /**
  *
  */

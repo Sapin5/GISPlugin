@@ -84,7 +84,7 @@ private:
 	void LoadRasterImages();
 
 
-	bool ErrorCheck(FPythonCommandEx&);
+	bool RunPythonCommand(FPythonCommandEx&);
 	bool EnableConfirm{ false };
 	bool IsFileSelected() const;
 
