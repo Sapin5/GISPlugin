@@ -10,6 +10,7 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 {
 	SPluginWindow::LoadPythonFile();
 	DefaultBrush = FAppStyle::Get().GetBrush("Productivity.Info");
+	TesterBrush2 = FAppStyle::Get().GetBrush("Productivity.Info");
 
 	ChildSlot
 		[
@@ -140,14 +141,14 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 			// Will likely break up more
 			SNew(GISLandscapeGeneration)
 		]
-		+ SVerticalBox::Slot().Padding(10.0f)
+		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
 		[
 			SAssignNew(SizeBox, SBox)
 				// So, the SBox is needed because we need to override the 
 				//.WidthOverride_Lambda([this]() {  return RasterCount * 128 + RasterCount * 4.0f; })
 				//.HeightOverride_Lambda([this]() { return RasterCount * 128 + RasterCount * 4.0f; })
-				.HeightOverride(RasterCount * 64 + RasterCount * 4.0f)
-				.WidthOverride(RasterCount * 64 + RasterCount * 4.0f)
+				.HeightOverride(RasterCount * 128 + RasterCount * 4.0f)
+				.WidthOverride(RasterCount * 128 + RasterCount * 4.0f)
 				[
 					SAssignNew(RasterGridPanel, SUniformGridPanel)
 						.SlotPadding(FMargin(2.0f))
@@ -182,12 +183,12 @@ void SPluginWindow::BuildRasterGrid()
 		const int32 Row = i / RasterCount;
 		const int32 Col = i % RasterCount;
 		const int32 Index = i;
-		UE_LOG(LogTemp, Log, TEXT("Adding image"));
+
 		RasterGridPanel->AddSlot(Col, Row)
 			[
 				SNew(SBox)
-					.WidthOverride(64)
-					.HeightOverride(64)
+					.WidthOverride(128)
+					.HeightOverride(128)
 					[
 						SNew(SImage)
 							.Image_Lambda([this, Index]() -> const FSlateBrush*
@@ -204,10 +205,9 @@ void SPluginWindow::SetRasterCount(int NewCount)
 {
 	RasterCount = NewCount;
 
-	const float NewSize = RasterCount * 64 + RasterCount * 4.0f;
+	const float NewSize = RasterCount * 128 + RasterCount * 4.0f;
 	SizeBox->SetWidthOverride(NewSize);
 	SizeBox->SetHeightOverride(NewSize);
-	// SPluginWindow::BuildRasterGrid();
 }
 
 
@@ -231,6 +231,7 @@ TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, cons
 void SPluginWindow::LoadRasterImages() {
 	FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments");
 
+
 	FString	TestFilePath;
 	FImage OutImage;
 
@@ -242,7 +243,7 @@ void SPluginWindow::LoadRasterImages() {
 			Texture = SPluginWindow::OptimizeImage(OutImage);
 		}
 
-		RasterBrush.Add(FDeferredCleanupSlateBrush::CreateBrush(Texture, FVector2D(64.0f, 64.0f)));
+		TesterBrush3.Add(FDeferredCleanupSlateBrush::CreateBrush(Texture, FVector2D(64.0f, 64.0f)));
 	}
 }
 
@@ -254,12 +255,12 @@ const FSlateBrush* SPluginWindow::GetMyRasterBrush(int Index) const {
 	* Has a fallback when there is no brush available
 	*/
 
-	if (RasterBrush.IsValidIndex(Index) && RasterBrush[Index].IsValid()) {
-		return RasterBrush[Index]->GetSlateBrush();
+	if (TesterBrush3.IsValidIndex(Index) && TesterBrush3[Index].IsValid()) {
+		return TesterBrush3[Index]->GetSlateBrush();
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("Default Brush was returned"));
-	return DefaultBrush;
+	return TesterBrush2;
 }
 
 
@@ -283,8 +284,6 @@ bool SPluginWindow::PollRasterGeneration() {
 			}
 
 			RasterCountDone = true;
-			SPluginWindow::SetRasterCount(RasterCount);
-			SPluginWindow::BuildRasterGrid();
 
 			if (TileViewWidget.IsValid())
 			{

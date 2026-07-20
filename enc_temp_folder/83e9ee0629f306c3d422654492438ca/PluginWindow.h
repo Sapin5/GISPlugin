@@ -45,7 +45,8 @@ private:
 	
 	TSharedPtr<FSlateDynamicImageBrush> DynamicBrush;
 
-	TArray<TSharedPtr<FDeferredCleanupSlateBrush>> RasterBrush;
+	TSharedPtr<FDeferredCleanupSlateBrush> TesterBrush;
+	TArray<TSharedPtr<FDeferredCleanupSlateBrush>> TesterBrush3;
 
 	TSharedPtr<SWidgetSwitcher> WidgetSwitcher;
 	int8 ActiveWidgetIndex{ 0 };
@@ -53,6 +54,8 @@ private:
 	const FSlateBrush* DefaultBrush;
 	const FSlateBrush* GetMyBrush() const;
 	const FSlateBrush* GetMyRasterBrush( int ) const;
+
+	const FSlateBrush* TesterBrush2;
 
 	TArray<FString> FoundFiles;
 
@@ -68,6 +71,8 @@ private:
 	UTexture2D* GeneratePreview(FString&);
 	UTexture2D* RasterSegmentToTexture(const FString&);
 	UTexture2D* OptimizeImage(FImage);
+
+	TArray<TSharedPtr<SImage>> RasterImages;
 
 	IPythonScriptPlugin* PythonPlugin;
 	
@@ -93,8 +98,7 @@ private:
 	UINT8 RasterCount{ 0 };
 	bool RasterCountDone{ false };
 
-	float RasterScaleX{ 64.0f };
-	float RasterScaleY{ 64.0f };
+	UINT8 RasterTracker{ 0 };
 
 	void SetRasterCount(int);
 	TSharedPtr<SBox> SizeBox;
