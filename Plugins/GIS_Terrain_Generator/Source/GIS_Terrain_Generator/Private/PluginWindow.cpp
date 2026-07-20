@@ -166,21 +166,12 @@ TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, cons
 	int32 Index = Item.IsValid() ? *Item : 0;
 
 	return SNew(STableRow<TSharedPtr<int32>>, OwnerTable)
-		[
-			SNew(SBox)
-				.WidthOverride(64.0f)
-				.WidthOverride(64.0f)
-				[
-					SNew(SOverlay)
-						+SOverlay::Slot()
-						[
-							SNew(SImage)
-								.Image_Lambda([this, Index]() -> const FSlateBrush*
-									{
-										return GetMyTesterBrush(Index);
-									})
-						]
-				]
+		[	
+			SNew(SImage)
+				.Image_Lambda([this, Index]() -> const FSlateBrush*
+					{
+						return GetMyTesterBrush(Index);
+					})		
 		];
 }
 
@@ -189,22 +180,19 @@ TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, cons
 void SPluginWindow::LoadRasterImages() {
 	FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments");
 
-	TArray<FString> FoundFiless;
-	IFileManager::Get().FindFiles(FoundFiless, *RasterFolder, TEXT("*.*"));
 
 	FString	TestFilePath;
 	FImage OutImage;
-	UTexture2D* temp{ nullptr };
 
-
-	for (int i = 0; i < FoundFiless.Num(); i++) {
-		TestFilePath = RasterFolder / FoundFiless[i];
+	for (int i = 0; i < FoundFiles.Num(); i++) {
+		UTexture2D* Texture{ nullptr };
+		TestFilePath = RasterFolder / FoundFiles[i];
 
 		if (FImageUtils::LoadImage(*TestFilePath, OutImage)) {
-			temp = SPluginWindow::OptimizeImage(OutImage);
+			Texture = SPluginWindow::OptimizeImage(OutImage);
 		}
 
-		TesterBrush3.Add(FDeferredCleanupSlateBrush::CreateBrush(temp, FVector2D(64.0f, 64.0f)));
+		TesterBrush3.Add(FDeferredCleanupSlateBrush::CreateBrush(Texture, FVector2D(64.0f, 64.0f)));
 	}
 }
 
@@ -219,13 +207,7 @@ const FSlateBrush* SPluginWindow::GetMyTesterBrush(int Index) const {
 	if (TesterBrush3.IsValidIndex(Index) && TesterBrush3[Index].IsValid()) {
 		return TesterBrush3[Index]->GetSlateBrush();
 	}
-	/*
-	if (TesterBrush.IsValid()) {
-		// If texture exists for brush, loads it and returns it
-		// UE_LOG(LogTemp, Log, TEXT("Custom Brush was returned"));
-		return TesterBrush->GetSlateBrush();
-	}
-	*/
+
 	UE_LOG(LogTemp, Log, TEXT("Default Brush was returned"));
 	return TesterBrush2;
 }
@@ -237,11 +219,11 @@ bool SPluginWindow::PollRasterGeneration() {
 	if (RasterDone) {
 		if(!RasterCountDone)
 		{
-			SPluginWindow::LoadRasterImages();
-
 			FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments");
 			FString FilterPath = RasterFolder / TEXT("*");
 			IFileManager::Get().FindFiles(FoundFiles, *FilterPath, true, false);
+			
+			SPluginWindow::LoadRasterImages();
 
 			RasterCount = (int32)FMath::Sqrt((float)FoundFiles.Num());
 
@@ -351,7 +333,7 @@ FReply SPluginWindow::SelectFile() {
 						// Creates brush to display in widget
 						DynamicBrush = MakeShared<FSlateDynamicImageBrush>(
 							PreviewTexture,
-							FVector2D(400.0f, 320.0f),
+							FVector2D(400.0f, 400.0f),
 							FName(*SelectedFilePath)
 						);
 
