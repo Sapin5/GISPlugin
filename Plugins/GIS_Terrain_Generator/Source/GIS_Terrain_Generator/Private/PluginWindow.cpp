@@ -538,7 +538,6 @@ UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 
 	// Create variables
 	FImage OutImage;
-	UTexture2D* Texture{ nullptr };
 
 	// Create FImage from bytes, for some reason this is in the wrong colour channels
 	if (FImageUtils::DecompressImage(ImageBytes.GetData(), ImageBytes.Num(), OutImage)) {
@@ -553,7 +552,6 @@ UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 UTexture2D* SPluginWindow::RasterSegmentToTexture(const FString& FilePath)
 {
 	FImage OutImage;
-	UTexture2D* Texture{ nullptr };
 
 	if (FImageUtils::LoadImage(*FilePath, OutImage)) {
 		return SPluginWindow::OptimizeImage(OutImage);
@@ -573,6 +571,8 @@ UTexture2D* SPluginWindow::OptimizeImage(FImage OutImage) {
 
 	if ((int32)OutImage.GammaSpace == 0) {
 		OutImage.ChangeFormat(ERawImageFormat::BGRA8, OutImage.GammaSpace);
+		Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
+		return Texture;
 	}
 	else {
 		OutImage.ChangeFormat(ERawImageFormat::BGRA8, EGammaSpace::sRGB);
