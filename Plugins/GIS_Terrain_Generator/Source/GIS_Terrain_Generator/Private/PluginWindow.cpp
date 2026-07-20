@@ -263,7 +263,7 @@ bool SPluginWindow::PollRasterGeneration() {
 	Ex = FPythonCommandEx();
 	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement;
 	Ex.Command = FString::Format(TEXT("SubProcessFile.poll()"), { "" });
-	SPluginWindow::ErrorCheck(Ex);
+	SPluginWindow::RunPythonCommand(Ex);
 
 	RasterDone = (Ex.CommandResult == "True");
 	return RasterDone;
@@ -448,7 +448,7 @@ void SPluginWindow::LoadPythonFile() {
 	FPythonCommandEx ImportSubP;
 	ImportSubP.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
 	ImportSubP.Command = TEXT("import importlib, SubProcessFile; importlib.reload(SubProcessFile)");
-	if (!SPluginWindow::ErrorCheck(ImportGIS) || !SPluginWindow::ErrorCheck(ImportSubP)) return;
+	if (!SPluginWindow::RunPythonCommand(ImportGIS) || !SPluginWindow::RunPythonCommand(ImportSubP)) return;
 }
 
 
@@ -470,7 +470,7 @@ void SPluginWindow::GenerateRaster(FString& FilePath) {
 	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
 	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
 	Ex.Command = FString::Format(TEXT("SubProcessFile.main('{0}')"), { SafePath });
-	if (!SPluginWindow::ErrorCheck(Ex)) return;
+	if (!SPluginWindow::RunPythonCommand(Ex)) return;
 }
 
 
@@ -487,7 +487,7 @@ UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 	Ex.Command = FString::Format(TEXT("GIS_Data_Processor.lowResolutionPreview('{0}')"), { SafePath });
 
 	// Run command and check if it fails
-	if (!SPluginWindow::ErrorCheck(Ex)) return nullptr;
+	if (!SPluginWindow::RunPythonCommand(Ex)) return nullptr;
 
 	// function returns string, this will remove whitespace
 	FString TempPath = Ex.CommandResult.TrimStartAndEnd();
@@ -514,7 +514,7 @@ UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 
 
 
-bool SPluginWindow::ErrorCheck(FPythonCommandEx& command) {
+bool SPluginWindow::RunPythonCommand(FPythonCommandEx& command) {
 	/*
 	* This is what executes commands. Probably will rename to better fit
 	* its use
