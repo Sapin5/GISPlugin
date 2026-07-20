@@ -568,9 +568,6 @@ UTexture2D* SPluginWindow::OptimizeImage(FImage OutImage) {
 	// Force colour channel to valid 
 	// For some reason unreal uses BRGA instead of RGBA?????
 
-
-	UTexture2D* Texture{ nullptr };
-
 	if ((int32)OutImage.GammaSpace == 0) {
 		OutImage.ChangeFormat(ERawImageFormat::BGRA8, OutImage.GammaSpace);
 	}
@@ -578,7 +575,9 @@ UTexture2D* SPluginWindow::OptimizeImage(FImage OutImage) {
 		OutImage.ChangeFormat(ERawImageFormat::BGRA8, EGammaSpace::sRGB);
 	}
 
-	Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
+
+	// Create actual texture 2D
+	UTexture2D* Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
 
 	// Optimize the texture specifically for Editor UI rendering
 	Texture->CompressionSettings = TC_EditorIcon;

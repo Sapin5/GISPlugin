@@ -36,6 +36,8 @@ public class GIS_Terrain_Generator : ModuleRules
                 "HeadMountedDisplay",
                 "SlateCore",
                 "HTTP",
+                "RenderCore",
+                "RHI"
 				// ... add other public dependencies that you statically link with here ...
 			}
             );
