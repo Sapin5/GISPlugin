@@ -26,6 +26,8 @@
 
 #include "Slate/DeferredCleanupSlateBrush.h"
 
+#include "Styling/StyleColors.h"
+
 /**
  *
  */
@@ -46,6 +48,7 @@ private:
 	TSharedPtr<FSlateDynamicImageBrush> DynamicBrush;
 
 	TArray<TSharedPtr<FDeferredCleanupSlateBrush>> RasterBrush;
+	TArray<UTexture2D*> RasterTextures;
 
 	TSharedPtr<SWidgetSwitcher> WidgetSwitcher;
 	int8 ActiveWidgetIndex{ 0 };
@@ -66,8 +69,7 @@ private:
 	UTexture2D* BytesToTexture(const TArray<uint8>& ImageBytes);
 	UTexture2D* PreviewTexture{ nullptr };
 	UTexture2D* GeneratePreview(FString&);
-	UTexture2D* RasterSegmentToTexture(const FString&);
-	UTexture2D* OptimizeImage(FImage);
+	UTexture2D* OptimizeImage(FImage&);
 
 	IPythonScriptPlugin* PythonPlugin;
 	
@@ -101,4 +103,5 @@ private:
 
 	TSharedPtr<SUniformGridPanel> RasterGridPanel;
 	void BuildRasterGrid();
+	void ClearRasterTextures();
 };

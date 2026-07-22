@@ -2,8 +2,9 @@
 
 
 #include "PluginWindow.h"
-#include "Styling/StyleColors.h"
+
 #include "RenderingThread.h"
+#include "Async/Async.h"
 
 // I dont like unreal
 void SPluginWindow::Construct(const FArguments& InArgs)
@@ -144,23 +145,10 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 		[
 			SAssignNew(SizeBox, SBox)
 				// So, the SBox is needed because we need to override the 
-				//.WidthOverride_Lambda([this]() {  return RasterCount * 128 + RasterCount * 4.0f; })
-				//.HeightOverride_Lambda([this]() { return RasterCount * 128 + RasterCount * 4.0f; })
 				.HeightOverride(RasterCount * 64 + RasterCount * 4.0f)
 				.WidthOverride(RasterCount * 64 + RasterCount * 4.0f)
 				[
 					SAssignNew(RasterGridPanel, SUniformGridPanel)
-						.SlotPadding(FMargin(2.0f))
-
-						/*
-						SAssignNew(TileViewWidget, STileView<TSharedPtr<int32>>)
-							.ListItemsSource(&TileItems)
-							.OnGenerateTile(this, &SPluginWindow::OnGenerateTile)
-							.ItemWidth(128)
-							.ItemHeight(128)
-							.SelectionMode(ESelectionMode::Single)
-							.ItemAlignment(EListItemAlignment::LeftAligned)
-						*/
 				]
 		];
 		
@@ -182,7 +170,7 @@ void SPluginWindow::BuildRasterGrid()
 		const int32 Row = i / RasterCount;
 		const int32 Col = i % RasterCount;
 		const int32 Index = i;
-		UE_LOG(LogTemp, Log, TEXT("Adding image"));
+
 		RasterGridPanel->AddSlot(Col, Row)
 			[
 				SNew(SBox)
@@ -197,6 +185,7 @@ void SPluginWindow::BuildRasterGrid()
 					]
 			];
 	}
+	
 }
 
 
@@ -207,7 +196,7 @@ void SPluginWindow::SetRasterCount(int NewCount)
 	const float NewSize = RasterCount * 64 + RasterCount * 4.0f;
 	SizeBox->SetWidthOverride(NewSize);
 	SizeBox->SetHeightOverride(NewSize);
-	// SPluginWindow::BuildRasterGrid();
+	AsyncTask(ENamedThreads::GameThread, [this]() { SPluginWindow::BuildRasterGrid(); });
 }
 
 
@@ -229,24 +218,48 @@ TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, cons
 
 
 void SPluginWindow::LoadRasterImages() {
-	FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments");
 
-	FString	TestFilePath;
+	SPluginWindow::ClearRasterTextures();
+	FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments_low");
+
+	FString	FilePath;
 	FImage OutImage;
-
 	for (int i = 0; i < FoundFiles.Num(); i++) {
 		UTexture2D* Texture{ nullptr };
-		TestFilePath = RasterFolder / FoundFiles[i];
+		FilePath = RasterFolder / FoundFiles[i];
 
-		if (FImageUtils::LoadImage(*TestFilePath, OutImage)) {
+		if (FImageUtils::LoadImage(*FilePath, OutImage)) {
 			Texture = SPluginWindow::OptimizeImage(OutImage);
 		}
 
-		RasterBrush.Add(FDeferredCleanupSlateBrush::CreateBrush(Texture, FVector2D(64.0f, 64.0f)));
+		if (Texture)
+		{
+			Texture->AddToRoot();
+			RasterTextures.Add(Texture);
+			RasterBrush.Add(FDeferredCleanupSlateBrush::CreateBrush(Texture, FVector2D(64.0f, 64.0f)));
+		}
+		else
+		{
+			RasterBrush.Add(nullptr);
+			RasterTextures.Add(nullptr);
+		}
 	}
 }
 
+void SPluginWindow::ClearRasterTextures() {
 
+	for (UTexture2D* Texture : RasterTextures) {
+		if (Texture) {
+
+			Texture->RemoveFromRoot();
+		}
+	}
+
+	RasterTextures.Empty();
+
+	RasterBrush.Empty();
+
+}
 
 const FSlateBrush* SPluginWindow::GetMyRasterBrush(int Index) const {
 	/*
@@ -258,7 +271,7 @@ const FSlateBrush* SPluginWindow::GetMyRasterBrush(int Index) const {
 		return RasterBrush[Index]->GetSlateBrush();
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("Default Brush was returned"));
+	UE_LOG(LogTemp, Warning, TEXT("GetMyRasterBrush: invalid brush at index %d"), Index);
 	return DefaultBrush;
 }
 
@@ -269,26 +282,25 @@ bool SPluginWindow::PollRasterGeneration() {
 	if (RasterDone) {
 		if(!RasterCountDone)
 		{
-			FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments");
+			FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments_low");
 			FString FilterPath = RasterFolder / TEXT("*");
+
 			IFileManager::Get().FindFiles(FoundFiles, *FilterPath, true, false);
-			
+
+			FoundFiles.Sort([](const FString& A, const FString& B) { return FCString::Atoi(*A) < FCString::Atoi(*B); });
+
 			SPluginWindow::LoadRasterImages();
 
 			RasterCount = (int32)FMath::Sqrt((float)FoundFiles.Num());
 
-			for (int32 i = 0; i < RasterCount * RasterCount; ++i)
-			{
-				TileItems.Add(MakeShared<int32>(i));
-			}
-
 			RasterCountDone = true;
-			SPluginWindow::SetRasterCount(RasterCount);
-			SPluginWindow::BuildRasterGrid();
 
-			if (TileViewWidget.IsValid())
+			SPluginWindow::SetRasterCount(RasterCount);
+
+			// AsyncTask(ENamedThreads::GameThread, [this]() { SPluginWindow::BuildRasterGrid(); });
+			if (RasterGridPanel.IsValid())
 			{
-				TileViewWidget->RequestListRefresh();
+				RasterGridPanel->Invalidate(EInvalidateWidget::Layout);
 			}
 		}
 		return true;
@@ -500,6 +512,8 @@ void SPluginWindow::GenerateRaster(FString& FilePath) {
 	// python will read the filepath and make a newline this prevents that
 	FString SafePath = FilePath.Replace(TEXT("\\"), TEXT("/"));
 
+
+
 	// prepares command for execution
 	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
 	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
@@ -583,23 +597,9 @@ UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 
 
 
-UTexture2D* SPluginWindow::RasterSegmentToTexture(const FString& FilePath)
-{
-	FImage OutImage;
-
-	if (FImageUtils::LoadImage(*FilePath, OutImage)) {
-		return SPluginWindow::OptimizeImage(OutImage);
-	}
-	
-	return nullptr;
-}
-
-
-
-UTexture2D* SPluginWindow::OptimizeImage(FImage OutImage) {
+UTexture2D* SPluginWindow::OptimizeImage(FImage& OutImage) {
 	// Force colour channel to valid 
 	// For some reason unreal uses BRGA instead of RGBA?????
-
 
 	UTexture2D* Texture{ nullptr };
 
@@ -619,7 +619,7 @@ UTexture2D* SPluginWindow::OptimizeImage(FImage OutImage) {
 	Texture->LODGroup = TEXTUREGROUP_UI;
 	Texture->NeverStream = true;
 	Texture->UpdateResource();
-	FlushRenderingCommands();
+	// FlushRenderingCommands();
 	return Texture;
 }
 
@@ -630,4 +630,6 @@ SPluginWindow::~SPluginWindow() {
 	{
 		PreviewTexture->RemoveFromRoot();
 	}
+
+	SPluginWindow::ClearRasterTextures();
 }

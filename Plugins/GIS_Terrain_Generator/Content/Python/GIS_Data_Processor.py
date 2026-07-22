@@ -11,9 +11,7 @@ sys.path.insert(0, lib_folder)
 import rasterio
 import math
 import numpy as np
-import io
 import tempfile
-import time
 
 from PIL import Image
 from collections import namedtuple
@@ -25,15 +23,18 @@ Segment = namedtuple('Segment', ['width', 'height', 'subdivisions'])
 Stats = namedtuple('Stats',['min', 'max'])
 Shape = namedtuple('Shape', ['rows', 'cols'])
 
-output_dir = os.path.join(Path(__file__).parents[1], "raster_segments")
-
+output_dir_high_res = os.path.join(Path(__file__).parents[1], "raster_segments_high")
+output_dir_low_res = os.path.join(Path(__file__).parents[1], "raster_segments_low")
 
 def outPutFolders():
     """
     Create output directories
     """
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir, exist_ok=True)
+    if not os.path.exists(output_dir_high_res):
+        os.makedirs(output_dir_high_res, exist_ok=True)
+
+    if not os.path.exists(output_dir_low_res):
+            os.makedirs(output_dir_low_res, exist_ok=True)
 
 
 
@@ -47,15 +48,18 @@ def getWindowSize(totalWidth, totalHeight):
     windowHeight = totalHeight
     windowWidth  = totalWidth
 
-    # Starts with 2 subdisvions by default
-    subdivisions = 2
+    maxSize = 4096
 
-    # Find optimal bounds for data parsing
-    while windowWidth > 4096 or windowHeight > 4096:
-        # 256 acts as a minimum size for png output
-        windowWidth  = round(totalWidth/subdivisions) if round(totalWidth/subdivisions) > 256 else 256
-        windowHeight = round(totalHeight/subdivisions) if round(totalHeight/subdivisions) > 256 else 256
-        subdivisions+=1
+    widthSubs = math.ceil(totalWidth / maxSize)
+    heightSubs = math.ceil(totalHeight / maxSize)
+
+    subdivisions = max(widthSubs, heightSubs)
+
+    # Starts with 2 subdisvions by default
+    subdivisions = max(2, subdivisions)
+
+    windowHeight = max(256, round(totalWidth / subdivisions))
+    windowWidth  = max(256, round(totalHeight / subdivisions))
 
     return Segment(windowWidth, windowHeight, subdivisions)
 
@@ -74,7 +78,7 @@ def getMinMax(data):
 
 
 
-def processData(data, totalRowsAndCols, windowInfo, globalStats):
+def processData(data, windowInfo, globalStats):
     """
     Processes the data and creates raster segments
     Outputs the segments to folder for them to be later stitched
@@ -83,11 +87,11 @@ def processData(data, totalRowsAndCols, windowInfo, globalStats):
     # noramalizing into 16bit
     rangeDiff = globalStats.max-globalStats.min
 
+    total_cols = math.ceil(data.width / windowInfo.width)
+
     for i, rowOff in enumerate(range(0, data.height, windowInfo.height)):
         for j, colOff in enumerate(range(0, data.width, windowInfo.width)):
 
-            # current = i * totalRowsAndCols.cols + j + 1
-            # total = totalRowsAndCols.cols*totalRowsAndCols.rows
             # Find first windows width
             # Find first windows height 
             wWidth  = min(windowInfo.width, data.width - colOff)
@@ -109,9 +113,17 @@ def processData(data, totalRowsAndCols, windowInfo, globalStats):
             normalize16Bit = np.asarray(normalize, dtype=np.uint16)
 
             # Saving output attempt
-            filename = os.path.join(output_dir, f"segment_row_{i}_col_{j}.png")
             img = Image.fromarray(normalize16Bit)
-            img.save(filename, dpi=(600, 600))
+
+            linear_index = i * total_cols + j
+            
+            filenameHigh = os.path.join(output_dir_high_res, f"{linear_index}.png")
+            img.save(filenameHigh, dpi=(600, 600))
+
+
+            filenameLow = os.path.join(output_dir_low_res, f"{linear_index}.png")
+            lowImg = img.resize((256, 256), Image.Resampling.BILINEAR)
+            lowImg.save(filenameLow)
 
 
 
@@ -130,7 +142,7 @@ def generateRaster(file_path):
 
         # Get dataset min max
         globalStats = getMinMax(data)
-        processData(data, totalRowsAndCols, windowInfo, globalStats)
+        processData(data, windowInfo, globalStats)
 
 
 
