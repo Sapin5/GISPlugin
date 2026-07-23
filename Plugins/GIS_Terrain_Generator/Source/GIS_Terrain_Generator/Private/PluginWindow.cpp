@@ -554,8 +554,7 @@ bool SPluginWindow::RunPythonCommand(FPythonCommandEx& Execution, FString& argum
 	* This is what executes commands
 	*/
     argument = argument.Replace(TEXT("\\"), TEXT("/"));
-	// Execution = FPythonCommandEx();
-	UE_LOG(LogTemp, Error, TEXT("Here"));
+
 	// Change execution mode to not print output or return value
 	if (ChangeMode) {
 		Execution.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement;
