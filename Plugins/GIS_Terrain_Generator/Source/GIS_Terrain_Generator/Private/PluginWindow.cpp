@@ -530,12 +530,15 @@ UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 	FString SafePath = FilePath.Replace(TEXT("\\"), TEXT("/"));
 
 	// prepares command for execution
+	/*
 	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
 	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
 	Ex.Command = FString::Format(TEXT("GIS_Data_Processor.lowResolutionPreview('{0}')"), { SafePath });
+	*/
 
+	FString args = FString::Format(TEXT("GIS_Data_Processor.lowResolutionPreview('{0}')"), { SafePath });
 	// Run command and check if it fails
-	if (!SPluginWindow::RunPythonCommand(Ex)) return nullptr;
+	if (!SPluginWindow::RunPythonCommand(Ex, args)) return nullptr;
 
 	// function returns string, this will remove whitespace
 	FString TempPath = Ex.CommandResult.TrimStartAndEnd();
@@ -564,8 +567,7 @@ UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 
 bool SPluginWindow::RunPythonCommand(FPythonCommandEx& command) {
 	/*
-	* This is what executes commands. Probably will rename to better fit
-	* its use
+	* This is what executes commands 
 	*/
 	if (!PythonPlugin->ExecPythonCommandEx(command)) // <- this both executes the command and checks if it failed
 	{
@@ -576,15 +578,32 @@ bool SPluginWindow::RunPythonCommand(FPythonCommandEx& command) {
 }
 
 
+bool SPluginWindow::RunPythonCommand(FPythonCommandEx& Command, FString& argument) {
+	/*
+	* This is what executes commands
+	*/
+	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
+	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
+	Ex.Command = argument;
+
+	if (!PythonPlugin->ExecPythonCommandEx(Ex)) // <- this both executes the command and checks if it failed
+	{
+		UE_LOG(LogTemp, Error, TEXT("Python call failed: %s"), *Ex.CommandResult);
+		return false;
+	}
+	return true;
+}
+
+
+
 UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 	/*
 	* Creates a Texture2D from bytes
-	*
-	* prior method was using had a bunch of warnings to not us it and to use FImage so yeah
+	* NOTE - If you ask claude, gemini, or gpt they will tell you to use an image wrapper
+	* Unreals own documentation says dont use an image wrapper
+	* Image wrapper is also complicated to set up
 	*/
-	UE_LOG(LogTemp, Log, TEXT("BytesToTexture received %d bytes"), ImageBytes.Num());
 
-	// Create variables
 	FImage OutImage;
 
 	// Create FImage from bytes, for some reason this is in the wrong colour channels
@@ -598,38 +617,41 @@ UTexture2D* SPluginWindow::BytesToTexture(const TArray<uint8>& ImageBytes) {
 
 
 UTexture2D* SPluginWindow::OptimizeImage(FImage& OutImage) {
-	// Force colour channel to valid 
+	
+	// Force colour channel to valid usable one in unreal
 	// For some reason unreal uses BRGA instead of RGBA?????
-
 	UTexture2D* Texture{ nullptr };
 
 	if ((int32)OutImage.GammaSpace == 0) {
+		// Some images passed through have a gammaspace of 0.
+		// If we set the gammaspace again like in the else
+		// the image will just get "brighter" and the colour will be off
 		OutImage.ChangeFormat(ERawImageFormat::BGRA8, OutImage.GammaSpace);
 		Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
 		return Texture;
 	}
 	else {
 		OutImage.ChangeFormat(ERawImageFormat::BGRA8, EGammaSpace::sRGB);
+		Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
+		/*
+		Optimize the texture specifically for Editor UI rendering
+		This actually doesnt do anything major, and flushing rendering commands was causing issues
+		Uncomment if needed
+
+		Texture->CompressionSettings = TC_EditorIcon;
+		Texture->LODGroup = TEXTUREGROUP_UI;
+		Texture->NeverStream = true;
+		Texture->UpdateResource();
+		FlushRenderingCommands();
+		*/
+		return Texture;
 	}
-
-	Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
-
-	// Optimize the texture specifically for Editor UI rendering
-	Texture->CompressionSettings = TC_EditorIcon;
-	Texture->LODGroup = TEXTUREGROUP_UI;
-	Texture->NeverStream = true;
-	Texture->UpdateResource();
-	// FlushRenderingCommands();
-	return Texture;
 }
 
 
 
 SPluginWindow::~SPluginWindow() {
-	if (PreviewTexture)
-	{
-		PreviewTexture->RemoveFromRoot();
-	}
-
+	// remove textures from root
+	if (PreviewTexture) PreviewTexture->RemoveFromRoot();
 	SPluginWindow::ClearRasterTextures();
 }

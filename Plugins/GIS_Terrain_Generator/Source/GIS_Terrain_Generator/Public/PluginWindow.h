@@ -104,4 +104,6 @@ private:
 	TSharedPtr<SUniformGridPanel> RasterGridPanel;
 	void BuildRasterGrid();
 	void ClearRasterTextures();
+
+	bool RunPythonCommand(FPythonCommandEx&, FString&);
 };
