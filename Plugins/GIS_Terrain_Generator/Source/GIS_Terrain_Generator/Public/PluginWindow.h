@@ -80,8 +80,6 @@ private:
 	void GenerateRaster(FString&);
 	void LoadRasterImages();
 
-
-	bool RunPythonCommand(FPythonCommandEx&);
 	bool EnableConfirm{ false };
 	bool IsFileSelected() const;
 
@@ -105,5 +103,5 @@ private:
 	void BuildRasterGrid();
 	void ClearRasterTextures();
 
-	bool RunPythonCommand(FPythonCommandEx&, FString&);
+	bool RunPythonCommand(FPythonCommandEx&, FString&, bool);
 };

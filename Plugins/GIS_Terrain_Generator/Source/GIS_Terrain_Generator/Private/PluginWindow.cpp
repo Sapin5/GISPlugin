@@ -306,12 +306,13 @@ bool SPluginWindow::PollRasterGeneration() {
 		return true;
 	}
 
-	Ex = FPythonCommandEx();
-	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement;
-	Ex.Command = FString::Format(TEXT("SubProcessFile.poll()"), { "" });
-	SPluginWindow::RunPythonCommand(Ex);
 
-	RasterDone = (Ex.CommandResult == "True");
+	FPythonCommandEx PollRaster;
+	FString PollArgs = TEXT("SubProcessFile.poll()");
+	// FString::Format(TEXT("SubProcessFile.poll()"), { "" });
+	SPluginWindow::RunPythonCommand(PollRaster, PollArgs, true);
+
+	RasterDone = (PollRaster.CommandResult == "True");
 	return RasterDone;
 };
 
@@ -488,13 +489,12 @@ void SPluginWindow::LoadPythonFile() {
 
 	// Imports files
 	FPythonCommandEx ImportGIS;
-	ImportGIS.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
-	ImportGIS.Command = TEXT("import importlib, GIS_Data_Processor; importlib.reload(GIS_Data_Processor)");
-
+	FString ImportArgs = TEXT("import importlib, GIS_Data_Processor; importlib.reload(GIS_Data_Processor)");
 	FPythonCommandEx ImportSubP;
-	ImportSubP.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
-	ImportSubP.Command = TEXT("import importlib, SubProcessFile; importlib.reload(SubProcessFile)");
-	if (!SPluginWindow::RunPythonCommand(ImportGIS) || !SPluginWindow::RunPythonCommand(ImportSubP)) return;
+	FString SubProcessingArgs = TEXT("import importlib, SubProcessFile; importlib.reload(SubProcessFile)");
+
+	if (!SPluginWindow::RunPythonCommand(ImportGIS, ImportArgs, false)) return;
+	if (!SPluginWindow::RunPythonCommand(ImportSubP, SubProcessingArgs, false)) return;
 }
 
 
@@ -508,17 +508,10 @@ void SPluginWindow::GenerateRaster(FString& FilePath) {
 	* which unreal does not like. This is gonna be a headache
 	*/
 
-	// Theres a slight chance that if the file path contains ../n/..
-	// python will read the filepath and make a newline this prevents that
-	FString SafePath = FilePath.Replace(TEXT("\\"), TEXT("/"));
-
-
-
 	// prepares command for execution
-	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
-	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
-	Ex.Command = FString::Format(TEXT("SubProcessFile.main('{0}')"), { SafePath });
-	if (!SPluginWindow::RunPythonCommand(Ex)) return;
+	FPythonCommandEx CreateRaster;
+	FString args = FString::Format(TEXT("SubProcessFile.main('{0}')"), { FilePath });
+	if (!SPluginWindow::RunPythonCommand(CreateRaster, args, true)) return;
 }
 
 
@@ -527,21 +520,12 @@ UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 
 	// Theres a slight chance that if the file path contains ../n/..
 	// python will read the filepath and make a newline this prevents that
-	FString SafePath = FilePath.Replace(TEXT("\\"), TEXT("/"));
-
-	// prepares command for execution
-	/*
-	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
-	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
-	Ex.Command = FString::Format(TEXT("GIS_Data_Processor.lowResolutionPreview('{0}')"), { SafePath });
-	*/
-
-	FString args = FString::Format(TEXT("GIS_Data_Processor.lowResolutionPreview('{0}')"), { SafePath });
-	// Run command and check if it fails
-	if (!SPluginWindow::RunPythonCommand(Ex, args)) return nullptr;
+	FPythonCommandEx CreatePreview;
+	FString args = FString::Format(TEXT("GIS_Data_Processor.lowResolutionPreview('{0}')"), { FilePath });
+	if (!SPluginWindow::RunPythonCommand(CreatePreview, args, true)) return nullptr;
 
 	// function returns string, this will remove whitespace
-	FString TempPath = Ex.CommandResult.TrimStartAndEnd();
+	FString TempPath = CreatePreview.CommandResult.TrimStartAndEnd();
 	// Python can use single quotes for strings, this is just gonna remove that
 	TempPath = TempPath.Replace(TEXT("'"), TEXT("")).Replace(TEXT("\""), TEXT(""));
 
@@ -565,30 +549,24 @@ UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 
 
 
-bool SPluginWindow::RunPythonCommand(FPythonCommandEx& command) {
-	/*
-	* This is what executes commands 
-	*/
-	if (!PythonPlugin->ExecPythonCommandEx(command)) // <- this both executes the command and checks if it failed
-	{
-		UE_LOG(LogTemp, Error, TEXT("Python call failed: %s"), *command.CommandResult);
-		return false;
-	}
-	return true;
-}
-
-
-bool SPluginWindow::RunPythonCommand(FPythonCommandEx& Command, FString& argument) {
+bool SPluginWindow::RunPythonCommand(FPythonCommandEx& Execution, FString& argument, bool ChangeMode) {
 	/*
 	* This is what executes commands
 	*/
-	Ex = FPythonCommandEx(); // <- read somewhere that it was better to reinitialize this before every run
-	Ex.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement; // Change execution mode to not print output or return value
-	Ex.Command = argument;
+    argument = argument.Replace(TEXT("\\"), TEXT("/"));
+	// Execution = FPythonCommandEx();
+	UE_LOG(LogTemp, Error, TEXT("Here"));
+	// Change execution mode to not print output or return value
+	if (ChangeMode) {
+		Execution.ExecutionMode = EPythonCommandExecutionMode::EvaluateStatement;
+	} else {
+		Execution.ExecutionMode = EPythonCommandExecutionMode::ExecuteStatement;
+	}
+	Execution.Command = argument;
 
-	if (!PythonPlugin->ExecPythonCommandEx(Ex)) // <- this both executes the command and checks if it failed
+	if (!PythonPlugin->ExecPythonCommandEx(Execution)) // <- this both executes the command and checks if it failed
 	{
-		UE_LOG(LogTemp, Error, TEXT("Python call failed: %s"), *Ex.CommandResult);
+		UE_LOG(LogTemp, Error, TEXT("Python call failed: %s"), *Execution.CommandResult);
 		return false;
 	}
 	return true;
