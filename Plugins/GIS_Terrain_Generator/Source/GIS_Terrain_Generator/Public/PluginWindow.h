@@ -12,6 +12,7 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "Widgets/Layout/SWidgetSwitcher.h"
+#include "Widgets/Layout/SScrollBox.h"
 
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Input/SButton.h"
@@ -27,6 +28,8 @@
 #include "Slate/DeferredCleanupSlateBrush.h"
 
 #include "Styling/StyleColors.h"
+
+#include "Brushes/SlateImageBrush.h"
 
 /**
  *
@@ -52,6 +55,8 @@ private:
 
 	TSharedPtr<SWidgetSwitcher> WidgetSwitcher;
 	int8 ActiveWidgetIndex{ 0 };
+
+	const FSlateImageBrush* temp;
 
 	const FSlateBrush* DefaultBrush;
 	const FSlateBrush* GetMyBrush() const;
@@ -85,10 +90,6 @@ private:
 
 	bool PollRasterGeneration();
 	bool RasterDone{ false };
-
-	TArray<TSharedPtr<int32>> TileItems;
-	TSharedPtr<STileView<TSharedPtr<int32>>> TileViewWidget;
-	TSharedRef<ITableRow> OnGenerateTile(TSharedPtr<int32>, const TSharedRef<STableViewBase>&);
 
 	UINT8 RasterCount{ 0 };
 	bool RasterCountDone{ false };

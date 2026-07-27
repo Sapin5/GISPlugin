@@ -28,7 +28,7 @@ READ THE FOLLOWING PLEASE PLEASE PLEASE
 =========================================================================================
 So there is a bug, if you're on the tiled map screen and grab any of the corners of the 
 screen and move them around to resize the window. There's a good chance the program 
-will stall/freeze. 
+will stall/freeze.
 
 I am not entirely sure why it occurs, but I have done some digging and found a
 potential cause
@@ -36,6 +36,10 @@ potential cause
 - Slate refreshes whenever window size is changed, so there could be a delay on slates
  update when the window refreshes. This causes something to reference a null pointer 
  which triggers a breakpoint. 
+
+- After more days of digging, I came across some resources that said this is potentially
+an unreal engine rendering issue. I have no idea how to mitigate this.
+
 
 If you encounter this bug. There is a good chance your program will NOT launch next time
 you try to build. 

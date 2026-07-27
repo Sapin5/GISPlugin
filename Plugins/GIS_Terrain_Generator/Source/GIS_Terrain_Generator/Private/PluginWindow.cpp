@@ -12,6 +12,8 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 	SPluginWindow::LoadPythonFile();
 	DefaultBrush = FAppStyle::Get().GetBrush("Productivity.Info");
 
+	temp = new FSlateImageBrush("C://Users//Spinto//Desktop//PlaceHolder.png", FVector2D(300, 300));
+
 	ChildSlot
 		[
 			SAssignNew(WidgetSwitcher, SWidgetSwitcher)
@@ -102,8 +104,9 @@ TSharedRef<SWidget> SPluginWindow::PreviewPage() {
 										+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
 										[
 											SNew(SImage)
-												.Image(this, &SPluginWindow::GetMyBrush)
-												.DesiredSizeOverride(FVector2D(400.0f, 400.0f))
+												.Image(temp)
+												//.Image(this, &SPluginWindow::GetMyBrush)
+												//.DesiredSizeOverride(FVector2D(400.0f, 400.0f))
 										]
 								]
 						]
@@ -143,15 +146,18 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 		]
 		+ SVerticalBox::Slot().Padding(10.0f)
 		[
-			SAssignNew(SizeBox, SBox)
-				// So, the SBox is needed because we need to override the 
-				.HeightOverride(RasterCount * 64 + RasterCount * 4.0f)
-				.WidthOverride(RasterCount * 64 + RasterCount * 4.0f)
+			SNew(SScrollBox).Orientation(Orient_Vertical)
+				+ SScrollBox::Slot().Padding(2.0f)
 				[
-					SAssignNew(RasterGridPanel, SUniformGridPanel)
+					SAssignNew(SizeBox, SBox).Clipping(EWidgetClipping::ClipToBounds)
+						// So, the SBox is needed because we need to override the 
+						.HeightOverride(RasterCount * 64 + RasterCount * 4.0f)
+						.WidthOverride(RasterCount * 64 + RasterCount * 4.0f)
+						[
+							SAssignNew(RasterGridPanel, SUniformGridPanel)
+						]		
 				]
 		];
-		
 }
 
 
@@ -160,6 +166,13 @@ void SPluginWindow::BuildRasterGrid()
 {
 	if (!RasterGridPanel.IsValid())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("BuildRasterGrid: RasterGridPanel invalid"));
+		return;
+	}
+
+	if (RasterCount <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BuildRasterGrid: RasterCount is %d, skipping"), RasterCount);
 		return;
 	}
 
@@ -171,6 +184,13 @@ void SPluginWindow::BuildRasterGrid()
 		const int32 Col = i % RasterCount;
 		const int32 Index = i;
 
+		const FSlateBrush* Brush = SPluginWindow::GetMyRasterBrush(Index);
+		if (!Brush)
+		{
+			UE_LOG(LogTemp, Error, TEXT("BuildRasterGrid: null brush at index %d, skipping slot"), Index);
+			continue;
+		}
+
 		RasterGridPanel->AddSlot(Col, Row)
 			[
 				SNew(SBox)
@@ -178,10 +198,7 @@ void SPluginWindow::BuildRasterGrid()
 					.HeightOverride(64)
 					[
 						SNew(SImage)
-							.Image_Lambda([this, Index]() -> const FSlateBrush*
-								{
-									return GetMyRasterBrush(Index);
-								})
+							.Image(Brush)
 					]
 			];
 	}
@@ -194,25 +211,15 @@ void SPluginWindow::SetRasterCount(int NewCount)
 	RasterCount = NewCount;
 
 	const float NewSize = RasterCount * 64 + RasterCount * 4.0f;
-	SizeBox->SetWidthOverride(NewSize);
-	SizeBox->SetHeightOverride(NewSize);
+	if (SizeBox.IsValid()) {
+		SizeBox->SetWidthOverride(NewSize);
+		SizeBox->SetHeightOverride(NewSize);
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("SetRasterCount: SizeBox is invalid"));
+	}
+
 	AsyncTask(ENamedThreads::GameThread, [this]() { SPluginWindow::BuildRasterGrid(); });
-}
-
-
-
-TSharedRef<ITableRow> SPluginWindow::OnGenerateTile(TSharedPtr<int32> Item, const TSharedRef<STableViewBase>& OwnerTable)
-{
-	int32 Index = Item.IsValid() ? *Item : 0;
-
-	return SNew(STableRow<TSharedPtr<int32>>, OwnerTable)
-		[	
-			SNew(SImage)
-				.Image_Lambda([this, Index]() -> const FSlateBrush*
-					{
-						return GetMyRasterBrush(Index);
-					})		
-		];
 }
 
 
@@ -266,12 +273,24 @@ const FSlateBrush* SPluginWindow::GetMyRasterBrush(int Index) const {
 	* Gets texture for brush
 	* Has a fallback when there is no brush available
 	*/
-
 	if (RasterBrush.IsValidIndex(Index) && RasterBrush[Index].IsValid()) {
-		return RasterBrush[Index]->GetSlateBrush();
+		const FSlateBrush* Brush = RasterBrush[Index]->GetSlateBrush();
+		if (Brush)
+		{
+			return Brush;
+		}
+		UE_LOG(LogTemp, Warning, TEXT("GetMyRasterBrush: GetSlateBrush() returned null at index %d"), Index);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetMyRasterBrush: invalid brush at index %d"), Index);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("GetMyRasterBrush: invalid brush at index %d"), Index);
+	if (!DefaultBrush)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetMyRasterBrush: DefaultBrush is also null!"));
+		return FStyleDefaults::GetNoBrush();
+	}
 	return DefaultBrush;
 }
 
@@ -334,6 +353,12 @@ const FSlateBrush* SPluginWindow::GetMyBrush() const{
 	if (DynamicBrush.IsValid()) {
 		// If texture exists for brush, loads it and returns it
 		return DynamicBrush.Get();
+	}
+
+	if (!DefaultBrush)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetMyBrush: DefaultBrush is null, returning FStyleDefaults"));
+		return FStyleDefaults::GetNoBrush();
 	}
 
 	return DefaultBrush;
@@ -541,8 +566,6 @@ UTexture2D* SPluginWindow::GeneratePreview(FString& FilePath) {
 	// Deletes tempfile that was created by python script
 	IFileManager::Get().Delete(*TempPath);
 
-	UE_LOG(LogTemp, Warning, TEXT("Preview has been created"));
-
 	// Creates and returns Texture2D created from bytes
 	return SPluginWindow::BytesToTexture(ImageBytes);
 }
@@ -553,6 +576,12 @@ bool SPluginWindow::RunPythonCommand(FPythonCommandEx& Execution, FString& argum
 	/*
 	* This is what executes commands
 	*/
+
+	if (!PythonPlugin)
+	{
+		UE_LOG(LogTemp, Error, TEXT("RunPythonCommand: PythonPlugin is null"));
+		return false;
+	}
     argument = argument.Replace(TEXT("\\"), TEXT("/"));
 
 	// Change execution mode to not print output or return value
