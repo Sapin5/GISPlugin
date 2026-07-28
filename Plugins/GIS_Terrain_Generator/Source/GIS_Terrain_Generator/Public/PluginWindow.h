@@ -13,6 +13,7 @@
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "Widgets/Layout/SWidgetSwitcher.h"
 #include "Widgets/Layout/SScrollBox.h"
+#include "Widgets/Layout/SScaleBox.h"
 
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Input/SButton.h"
@@ -30,6 +31,10 @@
 #include "Styling/StyleColors.h"
 
 #include "Brushes/SlateImageBrush.h"
+
+
+#include "Components/InvalidationBox.h"
+#include "Widgets/SInvalidationPanel.h"
 
 /**
  *
@@ -91,7 +96,7 @@ private:
 	bool PollRasterGeneration();
 	bool RasterDone{ false };
 
-	UINT8 RasterCount{ 0 };
+	int RasterCount{ 0 };
 	bool RasterCountDone{ false };
 
 	float RasterScaleX{ 64.0f };

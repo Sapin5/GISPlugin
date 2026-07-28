@@ -5,6 +5,7 @@
 
 #include "RenderingThread.h"
 #include "Async/Async.h"
+#include "TextureCompiler.h"
 
 // I dont like unreal
 void SPluginWindow::Construct(const FArguments& InArgs)
@@ -29,7 +30,6 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 
 
 	// Combo button could be useful later
-	// This section si for slate stuff I deleted butt could be usefull later
 	/*
 	SNew(SComboButton)
 	.ButtonContent()
@@ -58,7 +58,7 @@ TSharedRef<SWidget> SPluginWindow::PreviewPage() {
 		// Section with a border detail
 		+ SVerticalBox::Slot().AutoHeight().Padding(2.0f)
 		[
-			SNew(SBorder)
+			SNew(SBorder).ForceVolatile(true)
 				.BorderImage(FAppStyle::GetBrush("ToolPanel.GroupBorder"))
 				.Padding(4.0f)
 				[
@@ -101,13 +101,14 @@ TSharedRef<SWidget> SPluginWindow::PreviewPage() {
 										[
 											SNew(STextBlock).Text(INVTEXT("GeoTIFF Preview"))
 										]
+										
 										+ SVerticalBox::Slot().AutoHeight().Padding(10.0f)
 										[
 											SNew(SImage)
-												.Image(temp)
-												//.Image(this, &SPluginWindow::GetMyBrush)
+												.Image(this, &SPluginWindow::GetMyBrush)
 												//.DesiredSizeOverride(FVector2D(400.0f, 400.0f))
 										]
+										
 								]
 						]
 				]
@@ -149,13 +150,16 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 			SNew(SScrollBox).Orientation(Orient_Vertical)
 				+ SScrollBox::Slot().Padding(2.0f)
 				[
-					SAssignNew(SizeBox, SBox).Clipping(EWidgetClipping::ClipToBounds)
-						// So, the SBox is needed because we need to override the 
-						.HeightOverride(RasterCount * 64 + RasterCount * 4.0f)
-						.WidthOverride(RasterCount * 64 + RasterCount * 4.0f)
+					SNew(SScaleBox).ForceVolatile(false)
 						[
-							SAssignNew(RasterGridPanel, SUniformGridPanel)
-						]		
+							SAssignNew(SizeBox, SBox).Clipping(EWidgetClipping::ClipToBounds)
+								// So, the SBox is needed because we need to override the 
+								.HeightOverride(RasterCount * 64 + RasterCount * 4.0f)
+								.WidthOverride(RasterCount * 64 + RasterCount * 4.0f)
+								[
+									SAssignNew(RasterGridPanel, SUniformGridPanel)
+								]
+						]
 				]
 		];
 }
@@ -177,12 +181,12 @@ void SPluginWindow::BuildRasterGrid()
 	}
 
 	RasterGridPanel->ClearChildren();
-
-	for (int32 i = 0; i < RasterCount * RasterCount; ++i)
+	RasterGridPanel->Invalidate(EInvalidateWidget::LayoutAndVolatility);
+	for (int i = 0; i < RasterCount * RasterCount; ++i)
 	{
-		const int32 Row = i / RasterCount;
-		const int32 Col = i % RasterCount;
-		const int32 Index = i;
+		const int Row = i / RasterCount;
+		const int Col = i % RasterCount;
+		const int Index = i;
 
 		const FSlateBrush* Brush = SPluginWindow::GetMyRasterBrush(Index);
 		if (!Brush)
@@ -420,6 +424,8 @@ FReply SPluginWindow::SelectFile() {
 					if (PreviewTexture) {
 						PreviewTexture->AddToRoot();
 
+						FTextureCompilingManager::Get().FinishCompilation({ PreviewTexture });
+
 						// Creates brush to display in widget
 						DynamicBrush = MakeShared<FSlateDynamicImageBrush>(
 							PreviewTexture,
@@ -633,25 +639,20 @@ UTexture2D* SPluginWindow::OptimizeImage(FImage& OutImage) {
 		// If we set the gammaspace again like in the else
 		// the image will just get "brighter" and the colour will be off
 		OutImage.ChangeFormat(ERawImageFormat::BGRA8, OutImage.GammaSpace);
-		Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
-		return Texture;
 	}
 	else {
 		OutImage.ChangeFormat(ERawImageFormat::BGRA8, EGammaSpace::sRGB);
-		Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
-		/*
-		Optimize the texture specifically for Editor UI rendering
-		This actually doesnt do anything major, and flushing rendering commands was causing issues
-		Uncomment if needed
-
-		Texture->CompressionSettings = TC_EditorIcon;
-		Texture->LODGroup = TEXTUREGROUP_UI;
-		Texture->NeverStream = true;
-		Texture->UpdateResource();
-		FlushRenderingCommands();
-		*/
-		return Texture;
 	}
+
+	Texture = FImageUtils::CreateTexture2DFromImage(OutImage);
+
+	Texture->CompressionSettings = TC_EditorIcon;
+	Texture->LODGroup = TEXTUREGROUP_UI;
+	Texture->NeverStream = true;
+	Texture->UpdateResource();
+	FlushRenderingCommands();
+
+	return Texture;
 }
 
 
