@@ -52,6 +52,7 @@ private:
 
 	TSharedRef<SWidget> PreviewPage();
 	TSharedRef<SWidget> GISMapPage();
+	TSharedRef<SWidget> HighResPage();
 	
 	TSharedPtr<FSlateDynamicImageBrush> DynamicBrush;
 
@@ -73,6 +74,7 @@ private:
 	FReply ConfirmFile();
 	FReply ClearBrush();
 	FReply GoToPreviewPage();
+	FReply ReturnTileInformation(int);
 
 	FString SelectedFilePath;
 	
@@ -110,4 +112,13 @@ private:
 	void ClearRasterTextures();
 
 	bool RunPythonCommand(FPythonCommandEx&, FString&, bool);
+	
+	void Hovering(int);
+
+	void NotHovering(int);
+
+	EVisibility Visibility(int) const;
+
+	TArray<EVisibility> TileVisibility;
+	EVisibility test2{ EVisibility::Visible };
 };

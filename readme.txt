@@ -25,7 +25,12 @@ The intent is for the plugin to do the following:
 
 
 READ THE FOLLOWING PLEASE PLEASE PLEASE
-=========================================================================================
+
+The following can be mitigated by disabling access violations.
+Go to Debug -> Windows -> Exception Settings -> Win32 Exceptions -> uncheck 0xc0000005 Access violations
+When resizing the window, it may hang for a second and then you can continue to resize.
+I still have not figured out a permanent solution.
+=========================================================================================================
 So there is a bug, if you're on the tiled map screen and grab any of the corners of the 
 screen and move them around to resize the window. There's a good chance the program 
 will stall/freeze.
@@ -58,4 +63,4 @@ visual studio project files. This will regenerate the .sln and all relevant file
 You can launch the .sln once it is done and launch the project as normal.
 It may take a bit longer to build. 
 If it does not, delete the same folders, restart computer and regenerate files. 
-=========================================================================================
+=========================================================================================================

@@ -26,6 +26,10 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 				[
 					SPluginWindow::GISMapPage()
 				]
+				+ SWidgetSwitcher::Slot()
+				[
+					SNew(SButton)
+				]
 		];
 
 
@@ -138,6 +142,7 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 				.Text(INVTEXT("Go Back")).HAlign(HAlign_Center)
 				.OnClicked(this, &SPluginWindow::GoToPreviewPage)
 		]
+		/*
 		+ SVerticalBox::Slot().AutoHeight().Padding(10.0f).HAlign(HAlign_Center)
 		[
 			// This doesnt do anything yet and is here for testing stuff
@@ -145,6 +150,7 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 			// Will likely break up more
 			SNew(GISLandscapeGeneration)
 		]
+		*/
 		+ SVerticalBox::Slot().Padding(10.0f)
 		[
 			SNew(SScrollBox).Orientation(Orient_Vertical)
@@ -165,6 +171,10 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 }
 
 
+TSharedRef<SWidget> SPluginWindow::HighResPage() {
+	return SNew(SVerticalBox);
+}
+
 
 void SPluginWindow::BuildRasterGrid()
 {
@@ -182,6 +192,9 @@ void SPluginWindow::BuildRasterGrid()
 
 	RasterGridPanel->ClearChildren();
 	RasterGridPanel->Invalidate(EInvalidateWidget::LayoutAndVolatility);
+
+	TileVisibility.Init(EVisibility::Visible, RasterCount*RasterCount);
+	
 	for (int i = 0; i < RasterCount * RasterCount; ++i)
 	{
 		const int Row = i / RasterCount;
@@ -197,16 +210,73 @@ void SPluginWindow::BuildRasterGrid()
 
 		RasterGridPanel->AddSlot(Col, Row)
 			[
-				SNew(SBox)
-					.WidthOverride(64)
-					.HeightOverride(64)
+				SNew(SButton)
+					.ButtonStyle(FCoreStyle::Get(), "NoBorder")
+					.ContentPadding(0)
+					.OnClicked(this, &SPluginWindow::ReturnTileInformation, Index)
+					.OnHovered(this, &SPluginWindow::Hovering, Index)
+					.OnUnhovered(this, &SPluginWindow::NotHovering, Index)
 					[
-						SNew(SImage)
-							.Image(Brush)
+						SNew(SBox)
+							.WidthOverride(64)
+							.HeightOverride(64)
+							[
+								SNew(SImage)
+									.Image(Brush)
+									.Visibility(this, &SPluginWindow::Visibility, Index)
+							]
 					]
 			];
 	}
 	
+}
+
+
+
+EVisibility SPluginWindow::Visibility(int Index) const
+{
+	if (TileVisibility.IsValidIndex(Index))
+	{
+		return TileVisibility[Index];
+	}
+	return EVisibility::Visible;
+}
+
+void SPluginWindow::Hovering(int Index)
+{
+	if (TileVisibility.IsValidIndex(Index))
+	{
+		TileVisibility[Index] = EVisibility::Hidden;
+	}
+}
+
+void SPluginWindow::NotHovering(int Index)
+{
+	if (TileVisibility.IsValidIndex(Index))
+	{
+		TileVisibility[Index] = EVisibility::Visible;
+	}
+}
+
+
+
+FReply SPluginWindow::ReturnTileInformation(int Index) {
+
+	FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments_high");
+	FString	FilePath;
+
+	FImage OutImage;
+
+	FilePath = RasterFolder / FString::FromInt(Index) + ".png";
+	if (FImageUtils::LoadImage(*FilePath, OutImage)) {
+		UE_LOG(LogTemp, Log, TEXT("File path at: %s"), *FilePath);
+	}
+	else {
+		UE_LOG(LogTemp, Log, TEXT("Path invalid at: %s"), *FilePath);
+	}
+
+	
+	return FReply::Handled();
 }
 
 
