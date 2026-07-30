@@ -121,4 +121,8 @@ private:
 
 	TArray<EVisibility> TileVisibility;
 	EVisibility test2{ EVisibility::Visible };
+
+	// header — replaces TileVisibility + Visibility()
+
+	TArray<TSharedPtr<SImage>> RasterImages;
 };

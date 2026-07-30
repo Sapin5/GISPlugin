@@ -28,7 +28,7 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 				]
 				+ SWidgetSwitcher::Slot()
 				[
-					SNew(SButton)
+					SPluginWindow::HighResPage()
 				]
 		];
 
@@ -62,7 +62,7 @@ TSharedRef<SWidget> SPluginWindow::PreviewPage() {
 		// Section with a border detail
 		+ SVerticalBox::Slot().AutoHeight().Padding(2.0f)
 		[
-			SNew(SBorder).ForceVolatile(true)
+			SNew(SBorder)
 				.BorderImage(FAppStyle::GetBrush("ToolPanel.GroupBorder"))
 				.Padding(4.0f)
 				[
@@ -110,7 +110,6 @@ TSharedRef<SWidget> SPluginWindow::PreviewPage() {
 										[
 											SNew(SImage)
 												.Image(this, &SPluginWindow::GetMyBrush)
-												//.DesiredSizeOverride(FVector2D(400.0f, 400.0f))
 										]
 										
 								]
@@ -172,7 +171,18 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 
 
 TSharedRef<SWidget> SPluginWindow::HighResPage() {
-	return SNew(SVerticalBox);
+	return SNew(SVerticalBox)
+		+ SVerticalBox::Slot()
+		[
+			SNew(SImage)
+				.Image(DefaultBrush)
+		]
+		+SVerticalBox::Slot()
+		[
+			SNew(SButton)
+				.Text(INVTEXT("Go Back"))
+				.OnClicked(this, &SPluginWindow::ConfirmFile)
+		];
 }
 
 
@@ -193,7 +203,7 @@ void SPluginWindow::BuildRasterGrid()
 	RasterGridPanel->ClearChildren();
 	RasterGridPanel->Invalidate(EInvalidateWidget::LayoutAndVolatility);
 
-	TileVisibility.Init(EVisibility::Visible, RasterCount*RasterCount);
+	RasterImages.Init(nullptr, RasterCount*RasterCount);
 	
 	for (int i = 0; i < RasterCount * RasterCount; ++i)
 	{
@@ -208,6 +218,7 @@ void SPluginWindow::BuildRasterGrid()
 			continue;
 		}
 
+		TSharedPtr<SImage> TileImage;
 		RasterGridPanel->AddSlot(Col, Row)
 			[
 				SNew(SButton)
@@ -221,12 +232,12 @@ void SPluginWindow::BuildRasterGrid()
 							.WidthOverride(64)
 							.HeightOverride(64)
 							[
-								SNew(SImage)
+								SAssignNew(TileImage, SImage)
 									.Image(Brush)
-									.Visibility(this, &SPluginWindow::Visibility, Index)
 							]
 					]
 			];
+		RasterImages[Index] = TileImage;
 	}
 	
 }
@@ -244,17 +255,17 @@ EVisibility SPluginWindow::Visibility(int Index) const
 
 void SPluginWindow::Hovering(int Index)
 {
-	if (TileVisibility.IsValidIndex(Index))
+	if (RasterImages.IsValidIndex(Index) && RasterImages[Index].IsValid())
 	{
-		TileVisibility[Index] = EVisibility::Hidden;
+		RasterImages[Index]->SetColorAndOpacity(FLinearColor(1.f, 1.f, 1.f, 0.4f));
 	}
 }
 
 void SPluginWindow::NotHovering(int Index)
 {
-	if (TileVisibility.IsValidIndex(Index))
+	if (RasterImages.IsValidIndex(Index) && RasterImages[Index].IsValid())
 	{
-		TileVisibility[Index] = EVisibility::Visible;
+		RasterImages[Index]->SetColorAndOpacity(FLinearColor::White);
 	}
 }
 
@@ -267,6 +278,7 @@ FReply SPluginWindow::ReturnTileInformation(int Index) {
 
 	FImage OutImage;
 
+
 	FilePath = RasterFolder / FString::FromInt(Index) + ".png";
 	if (FImageUtils::LoadImage(*FilePath, OutImage)) {
 		UE_LOG(LogTemp, Log, TEXT("File path at: %s"), *FilePath);
@@ -275,7 +287,7 @@ FReply SPluginWindow::ReturnTileInformation(int Index) {
 		UE_LOG(LogTemp, Log, TEXT("Path invalid at: %s"), *FilePath);
 	}
 
-	
+	WidgetSwitcher->SetActiveWidgetIndex(2);
 	return FReply::Handled();
 }
 
@@ -326,6 +338,8 @@ void SPluginWindow::LoadRasterImages() {
 		}
 	}
 }
+
+
 
 void SPluginWindow::ClearRasterTextures() {
 
