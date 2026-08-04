@@ -13,7 +13,7 @@ test = None
     and creating a subprocess in c++ was more compilcated
 
     TO DO:
-    Figure out a way to poll this
+    Nothing anymore
 """
 
 def main(file_path):

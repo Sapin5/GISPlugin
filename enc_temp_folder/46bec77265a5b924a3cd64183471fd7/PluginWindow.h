@@ -101,6 +101,9 @@ private:
 	int RasterCount{ 0 };
 	bool RasterCountDone{ false };
 
+	float RasterScaleX{ 64.0f };
+	float RasterScaleY{ 64.0f };
+
 	void SetRasterCount(int);
 	TSharedPtr<SBox> SizeBox;
 

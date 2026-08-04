@@ -135,11 +135,6 @@ def generateRaster(file_path):
         # Creates window size for segmenting
         windowInfo = getWindowSize(data.width, data.height)
 
-        # Total rows and columns
-        totalRowsAndCols = Shape(math.ceil(data.width / windowInfo.width),
-                                math.ceil(data.height / windowInfo.height))
-
-
         # Get dataset min max
         globalStats = getMinMax(data)
         processData(data, windowInfo, globalStats)
