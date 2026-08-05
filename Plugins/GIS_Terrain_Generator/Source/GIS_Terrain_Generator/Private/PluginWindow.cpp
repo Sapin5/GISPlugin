@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "PluginWindow.h"
 
 #include "RenderingThread.h"
@@ -8,13 +7,36 @@
 #include "TextureCompiler.h"
 
 // I dont like unreal
+
+/* TODO:
+* HighResPage - This page was started but I will not be able to complete it
+*				The intent is for this page to have highlight and selection features
+*				So that the user can select regions of the height map to export
+*				for terrain generation
+*				
+* ReturnTileInformation - This currently working in the sense that it returns
+*						the file address for the high resolution counterpart 
+*						of the low res section that was selected. Nothing is being done
+*						with this address as of righ now however. It should be used to 
+*						create a new UTexture2D in the HighResPage
+*/
+
 void SPluginWindow::Construct(const FArguments& InArgs)
 {
+	// This needs to run at the start cause it will install the libraries
 	SPluginWindow::LoadPythonFile();
 	DefaultBrush = FAppStyle::Get().GetBrush("Productivity.Info");
+	
 
-	temp = new FSlateImageBrush("C://Users//Spinto//Desktop//PlaceHolder.png", FVector2D(300, 300));
-
+	/*
+	* Widget Switcher makes it super easy to make new screens
+	* 
+	* I ran out of time to break up this inot three seperate files. 
+	* Would probaly make it easier to trouble shoot and navigate. Sorry
+	* I have however added comments everywhere 
+	* 
+	* I wont lie, I left for like 30 minutes and forgot what else I was going to write
+	*/
 	ChildSlot
 		[
 			SAssignNew(WidgetSwitcher, SWidgetSwitcher)
@@ -50,6 +72,10 @@ void SPluginWindow::Construct(const FArguments& InArgs)
 	*/
 };
 
+
+/*
+* Preview Page just displays low res preview of the GeoTIFF
+*/
 TSharedRef<SWidget> SPluginWindow::PreviewPage() {
 
 	return SNew(SVerticalBox)
@@ -159,8 +185,8 @@ TSharedRef<SWidget> SPluginWindow::GISMapPage()
 						[
 							SAssignNew(SizeBox, SBox).Clipping(EWidgetClipping::ClipToBounds)
 								// So, the SBox is needed because we need to override the 
-								.HeightOverride(RasterCount * 64 + RasterCount * 4.0f)
-								.WidthOverride(RasterCount * 64 + RasterCount * 4.0f)
+								.HeightOverride(RasterCount * SPluginWindow::TileSize + RasterCount * 4.0f)
+								.WidthOverride(RasterCount * SPluginWindow::TileSize + RasterCount * 4.0f)
 								[
 									SAssignNew(RasterGridPanel, SUniformGridPanel)
 								]
@@ -188,6 +214,9 @@ TSharedRef<SWidget> SPluginWindow::HighResPage() {
 
 void SPluginWindow::BuildRasterGrid()
 {
+	/*
+	* This builds the tiled raster grid
+	*/
 	if (!RasterGridPanel.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("BuildRasterGrid: RasterGridPanel invalid"));
@@ -205,18 +234,23 @@ void SPluginWindow::BuildRasterGrid()
 
 	RasterImages.Init(nullptr, RasterCount*RasterCount);
 	
+	// Properlu populate the grid with images and buttons
 	for (int i = 0; i < RasterCount * RasterCount; ++i)
 	{
 		const int Row = i / RasterCount;
 		const int Col = i % RasterCount;
 		const int Index = i;
 
+		// Get image for the tile
 		const FSlateBrush* Brush = SPluginWindow::GetMyRasterBrush(Index);
+
 		if (!Brush)
 		{
+			// This was added when I was trying to solve the hitching issues could probably delete
 			UE_LOG(LogTemp, Error, TEXT("BuildRasterGrid: null brush at index %d, skipping slot"), Index);
 			continue;
 		}
+
 
 		TSharedPtr<SImage> TileImage;
 		RasterGridPanel->AddSlot(Col, Row)
@@ -229,8 +263,8 @@ void SPluginWindow::BuildRasterGrid()
 					.OnUnhovered(this, &SPluginWindow::NotHovering, Index)
 					[
 						SNew(SBox)
-							.WidthOverride(64)
-							.HeightOverride(64)
+							.WidthOverride(SPluginWindow::TileSize)
+							.HeightOverride(SPluginWindow::TileSize)
 							[
 								SAssignNew(TileImage, SImage)
 									.Image(Brush)
@@ -243,26 +277,20 @@ void SPluginWindow::BuildRasterGrid()
 }
 
 
-
-EVisibility SPluginWindow::Visibility(int Index) const
-{
-	if (TileVisibility.IsValidIndex(Index))
-	{
-		return TileVisibility[Index];
-	}
-	return EVisibility::Visible;
-}
-
 void SPluginWindow::Hovering(int Index)
 {
+	// Visual change to button for when hovering
 	if (RasterImages.IsValidIndex(Index) && RasterImages[Index].IsValid())
 	{
 		RasterImages[Index]->SetColorAndOpacity(FLinearColor(1.f, 1.f, 1.f, 0.4f));
 	}
 }
 
+
+
 void SPluginWindow::NotHovering(int Index)
 {
+	// Visual change to button for when youre not hovering
 	if (RasterImages.IsValidIndex(Index) && RasterImages[Index].IsValid())
 	{
 		RasterImages[Index]->SetColorAndOpacity(FLinearColor::White);
@@ -270,14 +298,16 @@ void SPluginWindow::NotHovering(int Index)
 }
 
 
-
 FReply SPluginWindow::ReturnTileInformation(int Index) {
-
+	/*
+	* This gets the file address of the highres counterpart of the tile that was selected
+	* The image is being loaded but is not being used or stored anywhere.
+	* (I ran out of time to implement it)
+	*/
 	FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments_high");
 	FString	FilePath;
 
 	FImage OutImage;
-
 
 	FilePath = RasterFolder / FString::FromInt(Index) + ".png";
 	if (FImageUtils::LoadImage(*FilePath, OutImage)) {
@@ -294,9 +324,12 @@ FReply SPluginWindow::ReturnTileInformation(int Index) {
 
 void SPluginWindow::SetRasterCount(int NewCount)
 {
+	/*
+	* Reads the files stored within the lowres folder to get the total 
+	*/
 	RasterCount = NewCount;
 
-	const float NewSize = RasterCount * 64 + RasterCount * 4.0f;
+	const float NewSize = RasterCount * SPluginWindow::TileSize + RasterCount * 4.0f;
 	if (SizeBox.IsValid()) {
 		SizeBox->SetWidthOverride(NewSize);
 		SizeBox->SetHeightOverride(NewSize);
@@ -312,6 +345,9 @@ void SPluginWindow::SetRasterCount(int NewCount)
 
 void SPluginWindow::LoadRasterImages() {
 
+	/*
+	* Loads Raster images for later use in grid
+	*/
 	SPluginWindow::ClearRasterTextures();
 	FString RasterFolder = FPaths::ProjectDir() / TEXT("Plugins/GIS_Terrain_Generator/Content/raster_segments_low");
 
@@ -327,9 +363,15 @@ void SPluginWindow::LoadRasterImages() {
 
 		if (Texture)
 		{
+			// In an attempt to stop the hitching from stopping
+			// the textures are added to root to prevent gc from clearing it
+			// did not work and i forgot to remove it and built around it
 			Texture->AddToRoot();
 			RasterTextures.Add(Texture);
-			RasterBrush.Add(FDeferredCleanupSlateBrush::CreateBrush(Texture, FVector2D(64.0f, 64.0f)));
+			RasterBrush.Add(FDeferredCleanupSlateBrush::CreateBrush(Texture, FVector2D(static_cast<float>(SPluginWindow::TileSize),
+																					   static_cast<float>(SPluginWindow::TileSize))));
+																						// Yes this could have been done better
+																						// I am very tired however
 		}
 		else
 		{
@@ -351,9 +393,7 @@ void SPluginWindow::ClearRasterTextures() {
 	}
 
 	RasterTextures.Empty();
-
 	RasterBrush.Empty();
-
 }
 
 const FSlateBrush* SPluginWindow::GetMyRasterBrush(int Index) const {
@@ -385,7 +425,11 @@ const FSlateBrush* SPluginWindow::GetMyRasterBrush(int Index) const {
 
 
 bool SPluginWindow::PollRasterGeneration() {
-
+	/*
+	* Pings the python file to see if the subprocess is done running
+	* If you feed this into an LLM it will scream at you that this is 
+	* causing hitches and performance issues. I promise you it is not
+	*/
 	if (RasterDone) {
 		if(!RasterCountDone)
 		{
@@ -416,7 +460,6 @@ bool SPluginWindow::PollRasterGeneration() {
 
 	FPythonCommandEx PollRaster;
 	FString PollArgs = TEXT("SubProcessFile.poll()");
-	// FString::Format(TEXT("SubProcessFile.poll()"), { "" });
 	SPluginWindow::RunPythonCommand(PollRaster, PollArgs, true);
 
 	RasterDone = (PollRaster.CommandResult == "True");

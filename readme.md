@@ -1,9 +1,16 @@
 # GIS Terrain Generator
 
+Copilot was used for commit summaries and descriptions when i was too tired to write them
 
 
 A plugin for unreal engine 5 that can generate terrain based on a submitted GeoTIFF file
 
+The relevant plugin files can be found by navigating to the following folders after opening
+your editor.
+Games -> GISPlugin -> Plugins -> Source -> GIS_Terrain_Generator
+Here you can find all the .h and .cpp files for the plugin.
+
+When adding new libraries double check that there is no needed C# include.
 
 
 The plugin uses Unreals built in widget system called "Slate". 
