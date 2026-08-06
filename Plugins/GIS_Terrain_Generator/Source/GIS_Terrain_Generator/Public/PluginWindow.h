@@ -116,9 +116,7 @@ private:
 
 	TArray<EVisibility> TileVisibility;
 
-	// header — replaces TileVisibility + Visibility()
-
 	TArray<TSharedPtr<SImage>> RasterImages;
 
-	int TileSize{ 128 };
+	int TileSize{ 70 };
 };
