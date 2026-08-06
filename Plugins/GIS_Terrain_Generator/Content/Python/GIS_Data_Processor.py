@@ -12,6 +12,7 @@ import rasterio
 import math
 import numpy as np
 import tempfile
+import shutil
 
 from PIL import Image
 from collections import namedtuple
@@ -26,15 +27,18 @@ Shape = namedtuple('Shape', ['rows', 'cols'])
 output_dir_high_res = os.path.join(Path(__file__).parents[1], "raster_segments_high")
 output_dir_low_res = os.path.join(Path(__file__).parents[1], "raster_segments_low")
 
-def outPutFolders():
-    """
-    Create output directories
-    """
-    if not os.path.exists(output_dir_high_res):
-        os.makedirs(output_dir_high_res, exist_ok=True)
 
-    if not os.path.exists(output_dir_low_res):
-            os.makedirs(output_dir_low_res, exist_ok=True)
+def outputFolders():
+    """
+    Create output directories, clearing any existing contents first
+    """
+    if os.path.exists(output_dir_high_res):
+        shutil.rmtree(output_dir_high_res)
+    os.makedirs(output_dir_high_res, exist_ok=True)
+
+    if os.path.exists(output_dir_low_res):
+        shutil.rmtree(output_dir_low_res)
+    os.makedirs(output_dir_low_res, exist_ok=True)
 
 
 
@@ -174,7 +178,7 @@ def main(file_path):
     attempted multi threading and subprocess, neither worked. 
     will be moving over to unreal for this most likely
     """
-    outPutFolders()
+    outputFolders()
     generateRaster(file_path)
 
 
